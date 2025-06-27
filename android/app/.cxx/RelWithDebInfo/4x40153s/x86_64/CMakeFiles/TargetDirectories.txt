@@ -1,0 +1,2 @@
+D:/BorisProjects/flutter/bjj_dairy/android/app/.cxx/RelWithDebInfo/4x40153s/x86_64/CMakeFiles/edit_cache.dir
+D:/BorisProjects/flutter/bjj_dairy/android/app/.cxx/RelWithDebInfo/4x40153s/x86_64/CMakeFiles/rebuild_cache.dir

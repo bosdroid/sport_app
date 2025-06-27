@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1037131909342",
+    "project_id": "bjj-diary-ba601",
+    "storage_bucket": "bjj-diary-ba601.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1037131909342:android:0b8310e84656a9f1701a4f",
+        "android_client_info": {
+          "package_name": "com.bjjdairy.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1037131909342-28u4gsf8jqdfsuo0mlp74j8hsheqjvse.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bjjdairy.app",
+            "certificate_hash": "24fc002e12d988c20f07470fc4e6b33292e1cc4b"
+          }
+        },
+        {
+          "client_id": "1037131909342-gv0oa633tglb1ckpohg0skb9n6e5a534.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgIR4g0A01rGdZthkGGWNRkcHDtfoWRpY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1037131909342-gv0oa633tglb1ckpohg0skb9n6e5a534.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1037131909342-7l62b5m94nb7cbfnkb0l99n8ehgqmj77.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.bjjdairy.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

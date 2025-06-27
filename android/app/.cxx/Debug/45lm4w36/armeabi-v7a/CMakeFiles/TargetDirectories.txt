@@ -1,0 +1,2 @@
+D:/BorisProjects/flutter/bjj_dairy/android/app/.cxx/Debug/45lm4w36/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/BorisProjects/flutter/bjj_dairy/android/app/.cxx/Debug/45lm4w36/armeabi-v7a/CMakeFiles/rebuild_cache.dir
