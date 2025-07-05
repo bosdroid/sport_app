@@ -42,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Image.asset('assets/images/logo.png'),
             SizedBox(height: 20),
             Text(
-              "Core Plan",
+              "DrillBox",
               style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
