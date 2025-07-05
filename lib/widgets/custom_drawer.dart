@@ -26,12 +26,12 @@ class CustomDrawer extends StatelessWidget {
             onTap: () => onItemTap('profile'),
           ),
           const SizedBox(height: 16),
-          // ListTile(
-          //   leading: const Icon(Icons.search_rounded),
-          //   title: const Text('Search Folder'),
-          //   onTap: () => onItemTap('search_folder'),
-          // ),
-          // const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.search_rounded),
+            title: const Text('Search Folder'),
+            onTap: () => onItemTap('search_folder'),
+          ),
+          const SizedBox(height: 16),
           // Contacts Section Title
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),

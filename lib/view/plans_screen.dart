@@ -436,52 +436,52 @@ class _PlansScreenState extends State<PlansScreen> {
                   });
                 },
               ),
-              // ListTile(
-              //   leading: const Icon(Icons.lock_open),
-              //   title: const Text('Change Access'),
-              //   trailing: Text(collection.access.toUpperCase(),style: TextStyle(fontSize: 14,color: Theme.of(context).primaryColor),),
-              //   onTap: () {
-              //     Navigator.pop(context); // Dismiss bottom sheet
-              //     Future.delayed(Duration.zero, () {
-              //       showChangeAccessBottomSheet(
-              //         context: parentContext,
-              //         planProvider: planProvider,
-              //         collection: collection,
-              //       );
-              //     });
-              //   },
-              // ),
-              // ListTile(
-              //   leading: const Icon(Icons.copy),
-              //   title: const Text('Copy'),
-              //   subtitle: Row(children: [
-              //     Text('ID:',style: TextStyle(color: Colors.black, fontSize: 16),),
-              //     const SizedBox(width: 6,),
-              //     Text('${collection.shareId}',style: TextStyle(color: Colors.grey, fontSize: 16),)
-              //   ],),
-              //   onTap: () {
-              //     final shareId = collection.shareId;
-              //     if (shareId != null && shareId.isNotEmpty) {
-              //       Clipboard.setData(ClipboardData(text: shareId));
-              //       ScaffoldMessenger.of(context).showSnackBar(
-              //         const SnackBar(
-              //           content: Text('ID copied to clipboard'),
-              //           duration: Duration(seconds: 2),
-              //         ),
-              //       );
-              //     } else {
-              //       ScaffoldMessenger.of(context).showSnackBar(
-              //         const SnackBar(
-              //           content: Text('ID is not available'),
-              //           duration: Duration(seconds: 2),
-              //         ),
-              //       );
-              //     }
-              //
-              //     Navigator.pop(context); // Dismiss bottom sheet
-              //
-              //   },
-              // ),
+              ListTile(
+                leading: const Icon(Icons.lock_open),
+                title: const Text('Change Access'),
+                trailing: Text(collection.access.toUpperCase(),style: TextStyle(fontSize: 14,color: Theme.of(context).primaryColor),),
+                onTap: () {
+                  Navigator.pop(context); // Dismiss bottom sheet
+                  Future.delayed(Duration.zero, () {
+                    showChangeAccessBottomSheet(
+                      context: parentContext,
+                      planProvider: planProvider,
+                      collection: collection,
+                    );
+                  });
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy),
+                title: const Text('Copy'),
+                subtitle: Row(children: [
+                  Text('ID:',style: TextStyle(color: Colors.black, fontSize: 16),),
+                  const SizedBox(width: 6,),
+                  Text('${collection.shareId}',style: TextStyle(color: Colors.grey, fontSize: 16),)
+                ],),
+                onTap: () {
+                  final shareId = collection.shareId;
+                  if (shareId != null && shareId.isNotEmpty) {
+                    Clipboard.setData(ClipboardData(text: shareId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ID copied to clipboard'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ID is not available'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+
+                  Navigator.pop(context); // Dismiss bottom sheet
+
+                },
+              ),
             ],
           ),
         );
