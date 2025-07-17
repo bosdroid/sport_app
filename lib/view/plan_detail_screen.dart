@@ -4,10 +4,12 @@ import 'package:bjj_dairy/widgets/add_image_card.dart';
 import 'package:bjj_dairy/widgets/full_image_viewer_dialog.dart';
 import 'package:bjj_dairy/widgets/video_list_view.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import '../model/comment.dart';
 import '../model/plan.dart';
 import '../providers/plan_provider.dart';
 import '../providers/validation_provider.dart';
@@ -21,8 +23,10 @@ import 'in_app_webview_screen.dart';
 
 class PlanDetailScreen extends StatefulWidget {
   final Plan plan;
+  final bool isShared;
 
-  const PlanDetailScreen({super.key, required this.plan});
+  const PlanDetailScreen(
+      {super.key, required this.plan, this.isShared = false});
 
   @override
   State<PlanDetailScreen> createState() => _PlanDetailScreenState();
@@ -46,6 +50,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   void initState() {
     super.initState();
     plan = widget.plan;
+    print(widget.isShared);
     titleController = TextEditingController(text: plan!.title);
     descriptionController = TextEditingController(text: plan!.description);
     // _tags = plan!.tags;
@@ -74,8 +79,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       final updatedDescription = descriptionController.text.trim();
       plan!.title = updatedTitle;
       plan!.description = updatedDescription;
-      plan!.images =
-          planProvider.finalUploadImages;
+      plan!.images = planProvider.finalUploadImages;
       plan!.videos = planProvider.videoEntries;
       plan!.tags = _tags;
       final updatedPlan = await planProvider.updatedPlan(plan!);
@@ -94,7 +98,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     }
   }
 
-  Future<void> _cancelEdit()async {
+  Future<void> _cancelEdit() async {
     setState(() {
       isEditing = false;
     });
@@ -114,7 +118,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         flags: YoutubePlayerFlags(
           autoPlay: false,
           mute: false,
-          startAt:plan!.videos![0].timeInSeconds != null && plan!.videos![0].timeInSeconds! > 0
+          startAt: plan!.videos![0].timeInSeconds != null &&
+                  plan!.videos![0].timeInSeconds! > 0
               ? plan!.videos![0].timeInSeconds!
               : 0,
         ),
@@ -234,16 +239,21 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     }
   }
 
-  Widget _buildLinksItemCard(Plan plan, BuildContext context,PlanProvider planProvider) {
+  Widget _buildLinksItemCard(
+      Plan plan, BuildContext context, PlanProvider planProvider) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PlanDetailScreen(plan: plan),
-          ),
-        );
-      },
+      onTap: (widget.isShared || widget.plan.isShared) &&
+              widget.plan.folderId.isNotEmpty &&
+              widget.plan.folderId != plan.folderId
+          ? null
+          : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PlanDetailScreen(plan: plan),
+                ),
+              );
+            },
       child: Container(
         margin: EdgeInsets.symmetric(vertical: 6, horizontal: 6),
         padding: const EdgeInsets.all(12),
@@ -256,17 +266,23 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: ()=>showStatusOptions(context,plan,planProvider),
+                onTap: () => showStatusOptions(context, plan, planProvider),
                 child: Container(
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: plan.status == 'neutral' ? Colors.yellow : plan.status == 'success' ? Colors.green: Colors.red,
+                    color: plan.status == 'neutral'
+                        ? Colors.yellow
+                        : plan.status == 'success'
+                            ? Colors.green
+                            : Colors.red,
                     shape: BoxShape.circle,
                   ),
                 ),
               ),
-              const SizedBox(width: 8,),
+              const SizedBox(
+                width: 8,
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,19 +290,39 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     Text(plan.title,
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w600)),
-                    if(plan.note.isNotEmpty)
-                    ...[const SizedBox(height: 4),
-                    Text(
-                      plan.note,
-                      style: const TextStyle(fontSize: 13, color: Colors.black),
-                    )],
+                    if (plan.note.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        plan.note,
+                        style:
+                            const TextStyle(fontSize: 13, color: Colors.black),
+                      )
+                    ],
+                    if ((widget.isShared || widget.plan.isShared) &&
+                        widget.plan.folderId.isNotEmpty &&
+                        widget.plan.folderId != plan.folderId) ...[
+                      const SizedBox(
+                        height: 2,
+                      ),
+                      Text(
+                        'Technique not available',
+                        style: TextStyle(
+                            color: Colors.red, fontStyle: FontStyle.italic),
+                      )
+                    ]
                   ],
                 ),
               ),
               // const Icon(Icons.chevron_right, color: Colors.grey),
               GestureDetector(
-                  onTap: ()=>showUpdateNoteBottomSheet(context, plan.id, plan.note, planProvider),
-                  child:  Icon(Icons.edit, color: Theme.of(context).primaryColor, size: 20)),
+                  onTap: (widget.isShared || widget.plan.isShared) &&
+                          widget.plan.folderId.isNotEmpty &&
+                          widget.plan.folderId != plan.folderId
+                      ? null
+                      : () => showUpdateNoteBottomSheet(
+                          context, plan.id, plan.note, planProvider),
+                  child: Icon(Icons.edit,
+                      color: Theme.of(context).primaryColor, size: 20)),
             ],
           ),
         ),
@@ -295,13 +331,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   }
 
   void showUpdateNoteBottomSheet(
-      BuildContext context,
-      String planId,
-      String currentNote,
-      PlanProvider planProvider,
-      ) {
+    BuildContext context,
+    String planId,
+    String currentNote,
+    PlanProvider planProvider,
+  ) {
     final TextEditingController _noteController =
-    TextEditingController(text: currentNote);
+        TextEditingController(text: currentNote);
 
     showModalBottomSheet(
       context: context,
@@ -373,7 +409,11 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       BuildContext context, PlanProvider provider, Plan plan) {
     String errorMessage = '';
     // if (provider.videoEntries.isEmpty) {
-    provider.addVideoEntry(VideoEntry(title: '', url: '',timestamp: DateTime.now().millisecondsSinceEpoch, isYoutubeUrl: false));
+    provider.addVideoEntry(VideoEntry(
+        title: '',
+        url: '',
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        isYoutubeUrl: false));
     // }
 
     showModalBottomSheet(
@@ -448,8 +488,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                       ),
                                       child: TextFormField(
                                         initialValue: entry.url,
-                                        decoration: _bottomSheetInputDecoration(
-                                            'URL'),
+                                        decoration:
+                                            _bottomSheetInputDecoration('URL'),
                                         onChanged: (value) {
                                           // final isYoutube = Util.isYouTubeUrl(value);
                                           // provider.updateVideoEntry(
@@ -966,9 +1006,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
   Future<void> _addTag(String value, BuildContext context) async {
     final tag = value.trim();
-    if (tag.isNotEmpty ) {
+    if (tag.isNotEmpty) {
       await Provider.of<ValidationProvider>(context, listen: false)
-          .validateTags(_tags,tag);
+          .validateTags(_tags, tag);
       if (Provider.of<ValidationProvider>(context, listen: false).tagsError ==
           null) {
         setState(() {
@@ -1029,10 +1069,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 onPressed: () async {
                   if (!_tags.contains(suggestion)) {
                     await Provider.of<ValidationProvider>(context,
-                        listen: false)
-                        .validateTags(_tags,suggestion);
+                            listen: false)
+                        .validateTags(_tags, suggestion);
                     if (Provider.of<ValidationProvider>(context, listen: false)
-                        .tagsError ==
+                            .tagsError ==
                         null) {
                       setState(() {
                         _tags.add(suggestion);
@@ -1130,9 +1170,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     _suggestedTags.add(tag);
                   }
                 });
-                await Provider.of<ValidationProvider>(context,
-                    listen: false)
-                    .validateTags(_tags,tag);
+                await Provider.of<ValidationProvider>(context, listen: false)
+                    .validateTags(_tags, tag);
               },
             );
           }).toList(),
@@ -1152,7 +1191,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       builder: (context) {
         return Padding(
           padding:
-          const EdgeInsets.only(top: 12.0, left: 16, right: 16, bottom: 24),
+              const EdgeInsets.only(top: 12.0, left: 16, right: 16, bottom: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1184,8 +1223,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          SelectPlanScreen(planId: plan.id,isParent: false,),
+                      builder: (context) => SelectPlanScreen(
+                        planId: plan.id,
+                        isParent: false,
+                      ),
                     ),
                   );
                   // final updatedPlan = await Navigator.push(
@@ -1206,12 +1247,11 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 title: const Text('Create New'),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.pushNamed(
-                      context, RoutesNames.addPlanScreen,
+                  Navigator.pushNamed(context, RoutesNames.addPlanScreen,
                       arguments: {
                         "parentId": plan.id,
                         "isConnection": true,
-                        "folderId":""
+                        "folderId": ""
                       });
                 },
               ),
@@ -1233,7 +1273,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       builder: (context) {
         return Padding(
           padding:
-          const EdgeInsets.only(top: 12.0, left: 16, right: 16, bottom: 24),
+              const EdgeInsets.only(top: 12.0, left: 16, right: 16, bottom: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1338,8 +1378,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
               color: Colors.grey.shade200,
               border: Border.all(color: Colors.grey.shade100),
             ),
-            child:
-            Consumer<ValidationProvider>(
+            child: Consumer<ValidationProvider>(
               builder: (context, validator, _) {
                 return TextFormField(
                   initialValue: entry.url,
@@ -1373,8 +1412,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                   ),
                   onChanged: (value) {
                     validator.validUrl(value);
-                    if(validator.urlError == null)
-                    {
+                    if (validator.urlError == null) {
                       final isYoutube = Util.isYouTubeUrl(value);
                       provider.updateVideoEntry(
                         index,
@@ -1413,10 +1451,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                   ),
                   onChanged: (value) {
                     validator.validateVideoTitle(value);
-                    if(validator.videoTitleError == null){
-                      provider.updateVideoEntry(index, entry.copyWith(title: value));
+                    if (validator.videoTitleError == null) {
+                      provider.updateVideoEntry(
+                          index, entry.copyWith(title: value));
                     }
-
                   },
                 );
               },
@@ -1425,98 +1463,98 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
           const SizedBox(height: 16),
           entry.isYoutubeUrl || Util.isYouTubeUrl(entry.url)
               ? Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey.shade200,
-                    border: Border.all(color: Colors.grey.shade100),
-                  ),
-                  child: TextFormField(
-                    initialValue: entry.timeInSeconds != null
-                        ? (entry.timeInSeconds! ~/ 60).toString()
-                        : '',
-                    decoration: InputDecoration(
-                      hintText: 'Minutes',
-                      border: InputBorder.none,
-                      // filled: true,
-                      // fillColor: Colors.white,
-                      // border: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // enabledBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // focusedBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                      // ),
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey.shade200,
+                          border: Border.all(color: Colors.grey.shade100),
+                        ),
+                        child: TextFormField(
+                          initialValue: entry.timeInSeconds != null
+                              ? (entry.timeInSeconds! ~/ 60).toString()
+                              : '',
+                          decoration: InputDecoration(
+                            hintText: 'Minutes',
+                            border: InputBorder.none,
+                            // filled: true,
+                            // fillColor: Colors.white,
+                            // border: OutlineInputBorder(
+                            //   borderRadius: BorderRadius.circular(8),
+                            //   borderSide: BorderSide(color: Colors.grey.shade300),
+                            // ),
+                            // enabledBorder: OutlineInputBorder(
+                            //   borderRadius: BorderRadius.circular(8),
+                            //   borderSide: BorderSide(color: Colors.grey.shade300),
+                            // ),
+                            // focusedBorder: OutlineInputBorder(
+                            //   borderRadius: BorderRadius.circular(8),
+                            //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
+                            // ),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            final minutes = int.tryParse(value) ?? 0;
+                            final seconds =
+                                int.tryParse(secondsController.text) ?? 0;
+                            provider.updateVideoEntry(
+                              index,
+                              entry.copyWith(
+                                  timeInSeconds: (minutes * 60) + seconds),
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      final minutes = int.tryParse(value) ?? 0;
-                      final seconds =
-                          int.tryParse(secondsController.text) ?? 0;
-                      provider.updateVideoEntry(
-                        index,
-                        entry.copyWith(
-                            timeInSeconds: (minutes * 60) + seconds),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey.shade200,
-                    border: Border.all(color: Colors.grey.shade100),
-                  ),
-                  child: TextFormField(
-                    initialValue: entry.timeInSeconds != null
-                        ? (entry.timeInSeconds! % 60).toString()
-                        : '',
-                    decoration: InputDecoration(
-                      hintText: 'Seconds',
-                      border: InputBorder.none,
-                      // filled: true,
-                      // fillColor: Colors.white,
-                      // border: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // enabledBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // focusedBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                      // ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey.shade200,
+                          border: Border.all(color: Colors.grey.shade100),
+                        ),
+                        child: TextFormField(
+                          initialValue: entry.timeInSeconds != null
+                              ? (entry.timeInSeconds! % 60).toString()
+                              : '',
+                          decoration: InputDecoration(
+                            hintText: 'Seconds',
+                            border: InputBorder.none,
+                            // filled: true,
+                            // fillColor: Colors.white,
+                            // border: OutlineInputBorder(
+                            //   borderRadius: BorderRadius.circular(8),
+                            //   borderSide: BorderSide(color: Colors.grey.shade300),
+                            // ),
+                            // enabledBorder: OutlineInputBorder(
+                            //   borderRadius: BorderRadius.circular(8),
+                            //   borderSide: BorderSide(color: Colors.grey.shade300),
+                            // ),
+                            // focusedBorder: OutlineInputBorder(
+                            //   borderRadius: BorderRadius.circular(8),
+                            //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
+                            // ),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            final minutes =
+                                int.tryParse(minutesController.text) ?? 0;
+                            final seconds = int.tryParse(value) ?? 0;
+                            provider.updateVideoEntry(
+                              index,
+                              entry.copyWith(
+                                  timeInSeconds: (minutes * 60) + seconds),
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      final minutes =
-                          int.tryParse(minutesController.text) ?? 0;
-                      final seconds = int.tryParse(value) ?? 0;
-                      provider.updateVideoEntry(
-                        index,
-                        entry.copyWith(
-                            timeInSeconds: (minutes * 60) + seconds),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          )
+                  ],
+                )
               : const SizedBox.shrink(),
           Align(
             alignment: Alignment.centerRight,
@@ -1556,18 +1594,143 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     );
   }
 
+  void _showCommentBottomSheet(BuildContext context,PlanProvider planProvider, Plan plan, String userId) {
+    final TextEditingController commentController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SizedBox(
+            height: 500,
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Text(
+                    "Comments",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                // Real-time Comment List
+                Expanded(
+                  child: StreamBuilder<DatabaseEvent>(
+                    stream: FirebaseDatabase.instance
+                        .ref('PLANS/${plan.id}/comments')
+                        .orderByChild('timestamp')
+                        .onValue,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+                        return const Center(child: Text("No comments yet."));
+                      }
+
+                      final rawComments = Map<String, dynamic>.from(snapshot.data!.snapshot.value as Map);
+                      final comments = rawComments.entries.map((entry) {
+                        final data = Map<String, dynamic>.from(entry.value);
+                        return Comment.fromMap(data);
+                      }).toList()
+                        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+                      return ListView.builder(
+                        itemCount: comments.length,
+                        itemBuilder: (context, index) {
+                          final comment = comments[index];
+                          return ListTile(
+                            leading: const Icon(Icons.person),
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(comment.userId),
+                                const SizedBox(width: 2,),
+                                Text('(${Util.timeAgo(comment.timestamp)})',
+                                    style: const TextStyle(fontSize: 12,color: Colors.grey))
+                              ],
+                            ),
+                            subtitle: Text(comment.text,style: TextStyle(fontSize: 18),),
+                            trailing: comment.userId == plan.userId ? IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              planProvider.deleteComment(
+                                  plan.id,
+                                comment.id
+                              );
+                            },
+                          ):const SizedBox.shrink(),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                const Divider(height: 1),
+
+                // Comment Input
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: commentController,
+                          decoration: const InputDecoration(
+                            hintText: 'Write a comment...',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Colors.blue),
+                        onPressed: () async {
+                          final text = commentController.text.trim();
+                          if (text.isNotEmpty) {
+                            planProvider.addComment(plan.id, userId, '', text,isShared: widget.isShared);
+                            commentController.clear();
+                          }
+                        },
+                      )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
-    final validationProvider = Provider.of<ValidationProvider>(context,listen: true);
-    List<Plan> parentPlans = planProvider.getParentPlans(plan!.id)
+
+    List<Plan> parentPlans = planProvider.getParentPlans(
+        plan!.id, (widget.isShared || widget.plan.isShared))
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp)) // Sort by timestamp
       ..forEach((plan) => plan.isExpanded = false); // Reset isExpanded
 
-    List<Plan> childPlans = planProvider.getChildPlans(plan!.id)
-      ..sort((a, b) =>
-          b.timestamp.compareTo(a.timestamp)) // Sort children by timestamp
-      ..forEach((plan) => plan.isExpanded = false); // Reset isExpanded
+    List<Plan> childPlans =
+        planProvider.getChildPlans(plan!.id, (widget.isShared || widget.plan.isShared))
+          ..sort((a, b) =>
+              b.timestamp.compareTo(a.timestamp)) // Sort children by timestamp
+          ..forEach((plan) => plan.isExpanded = false); // Reset isExpanded
 
     return WillPopScope(
       onWillPop: () async {
@@ -1575,106 +1738,108 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         return true;
       },
       child: Scaffold(
-          backgroundColor: const Color(0xFFF9FAFB),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.grey.shade300,
-                          width: 1.0,
-                        ),
+        backgroundColor: const Color(0xFFF9FAFB),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.shade300,
+                        width: 1.0,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.black),
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Details',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.black,
-                            ),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Details',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black,
                           ),
                         ),
-                        Row(
-                          children: [
-                            if (isEditing) ...[
-                              // IconButton(
-                              //   icon: const Icon(Icons.check, color: Colors.green),
-                              //   onPressed:(validationProvider.titleError == null)
-                              //       ? () {
-                              //     // Save or confirm action
-                              //     _toggleEdit(planProvider); // or call save method
-                              //   }:null,
-                              // ),
-                              Consumer<ValidationProvider>(
-                                builder: (context, provider, child) {
-                                  return IconButton(
-                                    icon:  Icon(Icons.check, color: provider.titleError == null ? Colors.green : Colors.grey),
-                                    onPressed: (provider.titleError == null)
-                                        ? () {
-                                      // Save or confirm action
-                                      _toggleEdit(planProvider); // or call save method
-                                    }
-                                        : null,
-                                  );
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close, color: Colors.red),
-                                onPressed: () {
-                                  // Cancel edit
-                                  _cancelEdit(); // implement this to reset changes
-                                },
-                              ),
-                            ] else ...[
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.black),
-                                onPressed: () => _toggleEdit(planProvider),
-                              ),
-                            ],
+                      ),
+                      Row(
+                        children: [
+                          if (isEditing) ...[
+                            Consumer<ValidationProvider>(
+                              builder: (context, provider, child) {
+                                return IconButton(
+                                  icon: Icon(Icons.check,
+                                      color: provider.titleError == null
+                                          ? Colors.green
+                                          : Colors.grey),
+                                  onPressed: (provider.titleError == null)
+                                      ? () {
+                                          // Save or confirm action
+                                          _toggleEdit(
+                                              planProvider); // or call save method
+                                        }
+                                      : null,
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.red),
+                              onPressed: () {
+                                // Cancel edit
+                                _cancelEdit(); // implement this to reset changes
+                              },
+                            ),
+                          ] else ...[
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.black),
+                              onPressed: () {
+                                if (!widget.isShared) {
+                                  _toggleEdit(planProvider);
+                                }
+                              },
+                            ),
                           ],
-                        )
-                      ],
-                    ),
+                        ],
+                      )
+                    ],
                   ),
-                  if (isEditing)
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: _buildTagsInput(context),
-                    ),
-                  if (plan!.tags.isNotEmpty && !isEditing)
-                    Container(
-                      width: MediaQuery.of(context).size.width,
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0,vertical: 10.0),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Wrap(
-                          spacing: 10,
-                          runSpacing: -8,
-                          children: plan!.tags
-                              .map(
-                                (tag) => Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                if (isEditing)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: _buildTagsInput(context),
+                  ),
+                if (plan!.tags.isNotEmpty && !isEditing)
+                  Container(
+                    width: MediaQuery.of(context).size.width,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 10.0),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: -8,
+                        children: plan!.tags
+                            .map((tag) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    border: Border.all(width: 1,color: Theme.of(context).primaryColor),
+                                    border: Border.all(
+                                        width: 1,
+                                        color: Theme.of(context).primaryColor),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -1685,19 +1850,31 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                       fontSize: 14,
                                     ),
                                   ),
-                                )
-                                //     Chip(
-                                //   label: Text(tag),
-                                //   backgroundColor: Theme.of(context).primaryColor,
-                                //   shape: StadiumBorder(),
-                                //   labelStyle: TextStyle(
-                                //       fontSize: 13, color: Colors.white),
-                                // ),
-                              )
-                              .toList(),
-                        ),
+                                ))
+                            .toList(),
                       ),
                     ),
+                  ),
+                Container(
+                  width: MediaQuery.of(context).size.width,
+                  color: Colors.white,
+                  margin: const EdgeInsets.only(top: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
+                    child: isEditing
+                        ? TitleInputField(controller: titleController)
+                        : Text(
+                            plan!.title,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+                if (plan!.description.isNotEmpty || isEditing)
                   Container(
                     width: MediaQuery.of(context).size.width,
                     color: Colors.white,
@@ -1706,118 +1883,90 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16.0, vertical: 8.0),
                       child: isEditing
-                          ? TitleInputField(controller: titleController)
-                          // TextField(
-                          //         controller: titleController,
-                          //         style: const TextStyle(
-                          //             fontSize: 20, fontWeight: FontWeight.bold),
-                          //         decoration: const InputDecoration(
-                          //             border: OutlineInputBorder(),
-                          //             labelText: 'Title'),
-                          //       )
-                          : Text(
-                              plan!.title,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          ? DescriptionField(
+                              initialDescription: descriptionController.text,
+                              onChanged: (description) {
+                                descriptionController.text = description;
+                              },
+                            )
+                          : ExpandableDescription(
+                              description: plan!.description),
                     ),
                   ),
-                  if (plan!.description.isNotEmpty || isEditing)
-                    Container(
-                      width: MediaQuery.of(context).size.width,
-                      color: Colors.white,
-                      margin: const EdgeInsets.only(top: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 8.0),
-                        child: isEditing
-                            ? DescriptionField(
-                                initialDescription: descriptionController.text,
-                                onChanged: (description) {
-                                  descriptionController.text = description;
-                                },
-                              )
-                            // TextField(
-                            //         controller: descriptionController,
-                            //         maxLines: null,
-                            //         decoration: const InputDecoration(
-                            //           border: OutlineInputBorder(),
-                            //           labelText: 'Description',
-                            //         ),
-                            //       )
-                            : ExpandableDescription(
-                                description: plan!.description),
-                      ),
+                if (isEditing) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.videocam,
+                            size: 18, color: Theme.of(context).primaryColor),
+                        SizedBox(width: 6),
+                        Text(
+                          "Video Links",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
-                  if(isEditing) ...[
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Row(
-                        children: [
-                          Icon(Icons.videocam,
-                              size: 18,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Consumer<PlanProvider>(
+                          builder: (context, planProvider, _) {
+                            final videoEntries = planProvider.videoEntries;
+                            return Column(
+                              children:
+                                  List.generate(videoEntries.length, (index) {
+                                return KeyedSubtree(
+                                  key: ValueKey(index),
+                                  child: _buildVideoEntry(
+                                      context, planProvider, index),
+                                );
+                              }),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton.icon(
+                          onPressed: () {
+                            if (widget.isShared || plan!.isShared) {
+                              return;
+                            }
+                            planProvider.addVideoEntry(VideoEntry(
+                                title: '',
+                                url: '',
+                                timestamp:
+                                    DateTime.now().millisecondsSinceEpoch,
+                                isYoutubeUrl: false));
+                          },
+                          icon: Icon(Icons.add,
                               color: Theme.of(context).primaryColor),
-                          SizedBox(width: 6),
-                          Text(
-                            "Video Links",
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Consumer<PlanProvider>(
-                            builder: (context, planProvider, _) {
-                              final videoEntries = planProvider.videoEntries;
-                              return Column(
-                                children: List.generate(videoEntries.length, (index) {
-                                  return KeyedSubtree(
-                                    key: ValueKey(index),
-                                    child: _buildVideoEntry(context, planProvider, index),
-                                  );
-                                }),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 10),
-                          TextButton.icon(
-                            onPressed: () {
-                              planProvider.addVideoEntry(VideoEntry(
-                                  title: '', url: '',timestamp: DateTime.now().millisecondsSinceEpoch, isYoutubeUrl: false));
-                            },
-                            icon: Icon(Icons.add,
+                          label: Text(
+                            'Add Another Video',
+                            style: TextStyle(
                                 color: Theme.of(context).primaryColor),
-                            label: Text(
-                              'Add Another Video',
-                              style: TextStyle(
-                                  color: Theme.of(context).primaryColor),
-                            ),
-                            style: TextButton.styleFrom(
-                              side: BorderSide(
-                                  color: Theme.of(context).primaryColor),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
                           ),
-                        ],
-                      ),
+                          style: TextButton.styleFrom(
+                            side: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      ],
                     ),
-                    Divider(
-                      height: 1,
-                      color: Colors.grey.shade300,
-                    ),
-                  ],
-                  if(!isEditing)
+                  ),
+                  Divider(
+                    height: 1,
+                    color: Colors.grey.shade300,
+                  ),
+                ],
+                if (!isEditing)
                   Container(
                     width: MediaQuery.of(context).size.width,
                     color: Colors.white,
@@ -1844,10 +1993,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                               '${plan!.videos!.length} Videos',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.black,
-                                fontStyle: FontStyle.italic
-                              ),
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                  fontStyle: FontStyle.italic),
                             ),
                           ],
                         ),
@@ -1863,7 +2011,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                       ? 80
                                       : 130,
                               child: VideoListView(
-                                videos: plan!.videos!..sort((a, b) => b.timestamp.compareTo(a.timestamp)),
+                                videos: plan!.videos!
+                                  ..sort((a, b) =>
+                                      b.timestamp.compareTo(a.timestamp)),
                                 onAddVideo: () {},
                                 onPlayVideo: (video) =>
                                     _openVideo(video, context),
@@ -1875,6 +2025,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             GestureDetector(
                               onTap: () {
                                 print('Add Video tapped');
+                                if (widget.isShared || plan!.isShared) {
+                                  return;
+                                }
                                 showAddVideosBottomSheet(
                                     context, planProvider, plan!);
                               },
@@ -1908,166 +2061,167 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       ],
                     ),
                   ),
-                  if(isEditing) ...[
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Row(
-                        children: [
-                          Icon(Icons.photo_library_outlined,
-                              size: 18,
+                if (isEditing) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.photo_library_outlined,
+                            size: 18, color: Theme.of(context).primaryColor),
+                        SizedBox(width: 6),
+                        Text(
+                          "Images",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          "(optional)",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // + Button to pick images
+                        TextButton.icon(
+                          onPressed: () {
+                            if (widget.isShared || plan!.isShared) {
+                              return;
+                            }
+                            planProvider.pickImages();
+                          },
+                          icon: Icon(Icons.upload_outlined,
                               color: Theme.of(context).primaryColor),
-                          SizedBox(width: 6),
-                          Text(
-                            "Images",
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            "(optional)",
+                          label: Text(
+                            'Upload Image',
                             style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // + Button to pick images
-                          TextButton.icon(
-                            onPressed: () {
-                              planProvider.pickImages();
-                            },
-                            icon: Icon(Icons.upload_outlined,
                                 color: Theme.of(context).primaryColor),
-                            label: Text(
-                              'Upload Image',
-                              style: TextStyle(
-                                  color: Theme.of(context).primaryColor),
-                            ),
-                            style: TextButton.styleFrom(
-                              side: BorderSide(
-                                  color: Theme.of(context).primaryColor),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
                           ),
-                          const SizedBox(height: 16),
-                          // Show selected images horizontally
-                          if (planProvider.selectedImages.isNotEmpty)
-                            SizedBox(
-                              height: 100, // Adjust height as needed
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: planProvider.selectedImages.length,
-                                itemBuilder: (context, index) {
-                                  final selectedImage =
-                                  planProvider.selectedImages[index];
-                                  return Stack(
-                                    children: [
-                                      Container(
-                                        margin:
-                                        const EdgeInsets.only(right: 8),
-                                        child: ClipRRect(
-                                          borderRadius:
-                                          BorderRadius.circular(8),
-                                          child: selectedImage.isLocal
-                                              ? Image.file(
-                                            selectedImage.localFile!,
-                                            width: 100,
-                                            height: 100,
-                                            fit: BoxFit.cover,
-                                          )
-                                              : Image.network(
-                                            selectedImage.url!,
-                                            width: 100,
-                                            height: 100,
-                                            fit: BoxFit.cover,
-                                            loadingBuilder: (context,
-                                                child,
-                                                loadingProgress) {
-                                              if (loadingProgress ==
-                                                  null) return child;
-                                              return Container(
+                          style: TextButton.styleFrom(
+                            side: BorderSide(
+                                color: Theme.of(context).primaryColor),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Show selected images horizontally
+                        if (planProvider.selectedImages.isNotEmpty)
+                          SizedBox(
+                            height: 100, // Adjust height as needed
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: planProvider.selectedImages.length,
+                              itemBuilder: (context, index) {
+                                final selectedImage =
+                                    planProvider.selectedImages[index];
+                                return Stack(
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: selectedImage.isLocal
+                                            ? Image.file(
+                                                selectedImage.localFile!,
                                                 width: 100,
                                                 height: 100,
-                                                color: Colors.grey[300],
-                                                child: const Center(
-                                                  child:
-                                                  CircularProgressIndicator(
-                                                      strokeWidth:
-                                                      2),
-                                                ),
-                                              );
-                                            },
-                                            errorBuilder: (context,
-                                                error, stackTrace) {
-                                              return Container(
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Image.network(
+                                                selectedImage.url!,
                                                 width: 100,
                                                 height: 100,
-                                                color: Colors.grey[300],
-                                                child: const Icon(
-                                                    Icons.error,
-                                                    color: Colors.red),
-                                              );
-                                            },
+                                                fit: BoxFit.cover,
+                                                loadingBuilder: (context, child,
+                                                    loadingProgress) {
+                                                  if (loadingProgress == null)
+                                                    return child;
+                                                  return Container(
+                                                    width: 100,
+                                                    height: 100,
+                                                    color: Colors.grey[300],
+                                                    child: const Center(
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                              strokeWidth: 2),
+                                                    ),
+                                                  );
+                                                },
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return Container(
+                                                    width: 100,
+                                                    height: 100,
+                                                    color: Colors.grey[300],
+                                                    child: const Icon(
+                                                        Icons.error,
+                                                        color: Colors.red),
+                                                  );
+                                                },
+                                              ),
+                                      ),
+                                    ),
+                                    // Remove button
+                                    Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          planProvider
+                                              .removeSelectedImage(index);
+                                        },
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black54,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 20,
                                           ),
                                         ),
                                       ),
-                                      // Remove button
-                                      Positioned(
-                                        top: 0,
-                                        right: 0,
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            planProvider
-                                                .removeSelectedImage(index);
-                                          },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.black54,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.close,
-                                              color: Colors.white,
-                                              size: 20,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                          const SizedBox(height: 4,),
-                          Consumer<ValidationProvider>(
-                            builder: (context, validationProvider, child) {
-                              return validationProvider.imagesError != null
-                                  ? Text(
-                                validationProvider.imagesError!,
-                                style: const TextStyle(color: Colors.red, fontSize: 14),
-                              )
-                                  : const SizedBox.shrink(); // returns nothing if no error
-                            },
                           ),
-                        ],
-                      ),
+                        const SizedBox(
+                          height: 4,
+                        ),
+                        Consumer<ValidationProvider>(
+                          builder: (context, validationProvider, child) {
+                            return validationProvider.imagesError != null
+                                ? Text(
+                                    validationProvider.imagesError!,
+                                    style: const TextStyle(
+                                        color: Colors.red, fontSize: 14),
+                                  )
+                                : const SizedBox
+                                    .shrink(); // returns nothing if no error
+                          },
+                        ),
+                      ],
                     ),
-                    Divider(
-                      height: 1,
-                      color: Colors.grey.shade300,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  if(!isEditing)
+                  ),
+                  Divider(
+                    height: 1,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (!isEditing)
                   Container(
                     width: MediaQuery.of(context).size.width,
                     color: Colors.white,
@@ -2152,6 +2306,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                         child: Center(
                                             child: CircularProgressIndicator()))
                                     : AddImageCard(onTap: () async {
+                                        if (widget.isShared || plan!.isShared) {
+                                          return;
+                                        }
                                         final updatedPlan = await planProvider
                                             .pickAndUploadImages(plan);
                                         setState(() {
@@ -2162,174 +2319,262 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(height: 4,),
+                        const SizedBox(
+                          height: 4,
+                        ),
                         Consumer<ValidationProvider>(
                           builder: (context, validationProvider, child) {
                             return validationProvider.imagesError != null
                                 ? Text(
-                              validationProvider.imagesError!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14),
-                            )
-                                : const SizedBox.shrink(); // returns nothing if no error
+                                    validationProvider.imagesError!,
+                                    style: const TextStyle(
+                                        color: Colors.red, fontSize: 14),
+                                  )
+                                : const SizedBox
+                                    .shrink(); // returns nothing if no error
                           },
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    width: MediaQuery.of(context).size.width,
-                    color: Colors.white,
-                    margin: const EdgeInsets.only(top: 10),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Linked Positions',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Colors.black,
+                Container(
+                  width: MediaQuery.of(context).size.width,
+                  color: Colors.white,
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Linked Positions',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 16,
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("You reach this position from",
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.grey)),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: parentPlans.isEmpty
+                                ? 50
+                                : parentPlans.length == 1
+                                    ? 100
+                                    : parentPlans.length == 2
+                                        ? 200
+                                        : 300,
+                            // or any height depending on how many items you want to show
+                            child: parentPlans.isEmpty
+                                ? ListView(
+                                    children: [
+                                      Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          child: Text(
+                                            "No parent positions added yet.",
+                                            style:
+                                                TextStyle(color: Colors.grey),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : ListView.builder(
+                                    itemCount: parentPlans.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildLinksItemCard(
+                                          parentPlans[index],
+                                          context,
+                                          planProvider);
+                                    },
+                                  ),
                           ),
-                        ),
-                        const SizedBox(
-                          height: 16,
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("You reach this position from",
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.grey)),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: parentPlans.isEmpty ? 50 : parentPlans.length == 1 ? 100 :parentPlans.length == 2? 200: 300, // or any height depending on how many items you want to show
-                              child: parentPlans.isEmpty
-                                  ? ListView(
-                                children: [
-                                  Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      child: Text(
-                                        "No parent positions added yet.",
-                                        style: TextStyle(color: Colors.grey),
-                                      ),
+                          // Add Button for Parent
+                          Container(
+                            width: MediaQuery.of(context).size.width,
+                            padding: const EdgeInsets.only(right: 10),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (widget.isShared || plan!.isShared) {
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SelectPlanScreen(
+                                      planId: plan!.id,
+                                      isParent: true,
                                     ),
                                   ),
-                                ],
-                              )
-                                  : ListView.builder(
-                                itemCount: parentPlans.length,
-                                itemBuilder: (context, index) {
-                                  return _buildLinksItemCard(parentPlans[index], context, planProvider);
-                                },
-                              ),
-                            ),
-                            // Add Button for Parent
-                            Container(
-                              width: MediaQuery.of(context).size.width,
-                              padding: const EdgeInsets.only(right: 10),
-                              child: GestureDetector(
-                                onTap: ()
-                                {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          SelectPlanScreen(planId: plan!.id,isParent: true,),
-                                    ),
-                                  );
-                                },
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Icon(Icons.add, color: Theme.of(context).primaryColor),
-                                      SizedBox(width: 4),
-                                      Text("Add",
-                                          style: TextStyle(color: Theme.of(context).primaryColor)),
-                                    ],
-                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Icon(Icons.add,
+                                        color: Theme.of(context).primaryColor),
+                                    SizedBox(width: 4),
+                                    Text("Add",
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .primaryColor)),
+                                  ],
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                          ),
+                          const SizedBox(height: 16),
 
-                            const Text(
-                                "From this position you can transition to",
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.grey)),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: childPlans.isEmpty ? 50 : childPlans.length == 1 ? 100 :childPlans.length == 2 ? 200 : 300, // or any height depending on how many items you want to show
-                              child: childPlans.isEmpty
-                                  ? ListView(
-                                children: [
-                                  Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      child: Text(
-                                        "No transitions added yet.",
-                                        style: TextStyle(color: Colors.grey),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                                  : ListView.builder(
-                                itemCount: childPlans.length,
-                                itemBuilder: (context, index) {
-                                  return _buildLinksItemCard(
-                                    childPlans[index],
-                                    context,
-                                    planProvider,
-                                  );
-                                },
-                              ),
-                            ),
-                            // Add Button for Child
-                            Container(
-                              width: MediaQuery.of(context).size.width,
-                              padding: const EdgeInsets.only(right: 10),
-                              child: GestureDetector(
-                                onTap: () => showAddLinksOptions(context, widget.plan, planProvider),
-                                // {
-                                //   Navigator.pushNamed(
-                                //       context, RoutesNames.addPlanScreen,
-                                //       arguments: {
-                                //         "parentId": plan!.id,
-                                //         "isConnection": true
-                                //       });
-                                // },
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
+                          const Text("From this position you can transition to",
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.grey)),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: childPlans.isEmpty
+                                ? 50
+                                : childPlans.length == 1
+                                    ? 100
+                                    : childPlans.length == 2
+                                        ? 200
+                                        : 300,
+                            // or any height depending on how many items you want to show
+                            child: childPlans.isEmpty
+                                ? ListView(
                                     children: [
-                                      Icon(Icons.add, color: Theme.of(context).primaryColor),
-                                      SizedBox(width: 4),
-                                      Text("Add",
-                                          style: TextStyle(color: Theme.of(context).primaryColor)),
+                                      Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 16),
+                                          child: Text(
+                                            "No transitions added yet.",
+                                            style:
+                                                TextStyle(color: Colors.grey),
+                                          ),
+                                        ),
+                                      ),
                                     ],
+                                  )
+                                : ListView.builder(
+                                    itemCount: childPlans.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildLinksItemCard(
+                                        childPlans[index],
+                                        context,
+                                        planProvider,
+                                      );
+                                    },
                                   ),
+                          ),
+                          // Add Button for Child
+                          Container(
+                            width: MediaQuery.of(context).size.width,
+                            padding: const EdgeInsets.only(right: 10),
+                            child: GestureDetector(
+                              onTap: () {
+                                if (widget.isShared || plan!.isShared) {
+                                  return;
+                                }
+                                showAddLinksOptions(
+                                    context, widget.plan, planProvider);
+                              },
+                              // {
+                              //   Navigator.pushNamed(
+                              //       context, RoutesNames.addPlanScreen,
+                              //       arguments: {
+                              //         "parentId": plan!.id,
+                              //         "isConnection": true
+                              //       });
+                              // },
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Icon(Icons.add,
+                                        color: Theme.of(context).primaryColor),
+                                    SizedBox(width: 4),
+                                    Text("Add",
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .primaryColor)),
+                                  ],
                                 ),
                               ),
                             ),
-                          ],
-                        )
-                      ],
-                    ),
+                          ),
+                        ],
+                      )
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 6,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Like Button
+                    TextButton.icon(
+                      onPressed: () {
+                        if (!plan!.likedBy.contains(planProvider.loggedUserId)) {
+                          planProvider.likePlan(plan!.id, planProvider.loggedUserId,isShared: widget.isShared);
+                        }
+                      },
+                      icon: Icon(
+                        plan!.likedBy.contains(planProvider.loggedUserId)
+                            ? Icons.thumb_up
+                            : Icons.thumb_up_outlined,
+                        color: Colors.blue,
+                      ),
+                      label: Text('${plan!.likedBy.length} Like'),
+                    ),
+
+                    // Favourite Button
+                    TextButton.icon(
+                      onPressed: () {
+                        if(widget.isShared || plan!.userId != planProvider.loggedUserId){
+                        planProvider.toggleFavourite(plan!.id, planProvider.loggedUserId,widget.isShared);
+                        }
+                      },
+                      icon: Icon(
+                        plan!.favouritedBy.contains(planProvider.loggedUserId)
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: Colors.red,
+                      ),
+                      label: Text('Favourite'),
+                    ),
+
+                    // Comment Button
+                    TextButton.icon(
+                      onPressed: () {
+                        _showCommentBottomSheet(context, planProvider,plan!, planProvider.loggedUserId);
+                      },
+                      icon: const Icon(Icons.comment, color: Colors.green),
+                      label: const Text('Comment'),
+                    ),
+                  ],
+                ),
+
+              ],
             ),
-          )),
+          ),
+        ),
+      ),
     );
   }
 }

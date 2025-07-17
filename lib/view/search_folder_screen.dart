@@ -1,8 +1,14 @@
+import 'dart:async';
+
+import 'package:bjj_dairy/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../model/folder.dart';
 import '../providers/plan_provider.dart';
 import '../widgets/collection_card.dart';
+import 'folder_plans_screen.dart';
 
 class SearchFolderScreen extends StatefulWidget {
   const SearchFolderScreen({super.key});
@@ -13,6 +19,95 @@ class SearchFolderScreen extends StatefulWidget {
 
 class _SearchFolderScreenState extends State<SearchFolderScreen> {
   final TextEditingController _searchController = TextEditingController();
+  bool isInternetAvailable = false;
+  late StreamSubscription<InternetStatus> listener;
+   @override
+  void initState() {
+    super.initState();
+    checkInternet();
+  }
+
+  @override
+  void dispose() {
+    listener.cancel();
+    super.dispose();
+  }
+
+  Future<void> checkInternet() async {
+    isInternetAvailable = await InternetConnection().hasInternetAccess;
+
+    listener = InternetConnection().onStatusChange.listen((InternetStatus status) {
+      switch (status) {
+        case InternetStatus.connected:
+        // The internet is now connected
+        setState(() {
+          isInternetAvailable = true;
+        });
+          break;
+        case InternetStatus.disconnected:
+        // The internet is now disconnected
+          setState(() {
+            isInternetAvailable = false;
+          });
+          break;
+      }
+    });
+  }
+
+  void showCollectionOptions(
+      BuildContext context,
+      Folder collection,
+      PlanProvider planProvider,
+      ) {
+    final parentContext =
+        context; // Save parent context before opening bottom sheet
+
+    showModalBottomSheet(
+      context: parentContext,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding:
+          const EdgeInsets.only(top: 12.0, left: 16, right: 16, bottom: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Top bar with close icon
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 24), // Placeholder to center title
+                  const Text(
+                    'Options',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.copy_all),
+                title: const Text('Copy Folder'),
+                onTap: () {
+                  Navigator.pop(context); // Dismiss bottom sheet
+                  // Use the outer context, not this builder context
+                  planProvider.copySharedFolderWithTechniques(collection);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,12 +171,17 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchController.clear();
+                              planProvider.searchPublicFolders('');
                               // planProvider.clearSearchResults();
                             },
                           )
                         : null,
                   ),
                   onChanged: (value) {
+                    if(!isInternetAvailable){
+                      Util.showMessageDialog(context, 'Internet required to search this folder!');
+                      return;
+                    }
                     planProvider.searchPublicFolders(value);
                   },
                 ),
@@ -138,22 +238,40 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                         // 🔑 Required key for reordering
                         margin: const EdgeInsets.symmetric(horizontal: 8),
                         child: CollectionCard(
-                          title: collection.name ?? '',
+                          folder: collection,
                           count: 0,
-                          onTap: () {
+                          userId: planProvider.loggedUserId,
+                          onTap: () async {
                             // planProvider.filterPlans("", null);
                             // planProvider.applyTagFilter([], null);
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (_) => FolderPlansScreen(
-                            //         folderId: collection.id!),
-                            //   ),
-                            // );
+                            if(!isInternetAvailable){
+                              Util.showMessageDialog(context, 'Internet required to access this folder!');
+                              return;
+                            }
+                            if(collection.access == 'private'){
+                              Util.showMessageDialog(context, 'You do not have access to this folder!');
+                              return;
+                            }
+                            else if(collection.access == 'specific' && !collection.allowedUsers.contains(planProvider.loggedUserId)){
+                              Util.showMessageDialog(context, 'You do not have access to this folder!');
+                              return;
+                            }
+                            if(await planProvider.checkFolderPermission(planProvider.loggedUserId, collection.id!)){
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => FolderPlansScreen(
+                                    folderId: collection.id!,isShared: true,),
+                                ),
+                              );
+                            }
+                            else{
+                              Util.showMessageDialog(context, "You do not have access to this folder!");
+                            }
                           },
                           onMore: () {
-                            // showCollectionOptions(
-                            //     context, collection, planProvider);
+                            showCollectionOptions(
+                                context, collection, planProvider);
                           },
                         ),
                       );

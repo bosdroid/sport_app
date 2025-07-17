@@ -1,6 +1,8 @@
 import 'package:bjj_dairy/view/folder_plans_screen.dart';
 import 'package:bjj_dairy/view/plan_detail_screen.dart';
 import 'package:bjj_dairy/widgets/plan_tile.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
@@ -39,16 +41,21 @@ class _PlansScreenState extends State<PlansScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<String> _selectedTags = [];
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
+  final DatabaseReference _usersDetailsRef = FirebaseDatabase.instance.ref().child('USERS_DETAILS/');
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      Provider.of<PlanProvider>(context, listen: false).fetchFolders();
-      Provider.of<PlanProvider>(context, listen: false).fetchPlans();
+      await Provider.of<PlanProvider>(context, listen: false).fetchFolders();
+      await Provider.of<PlanProvider>(context, listen: false).fetchPlans();
+      await Provider.of<PlanProvider>(context, listen: false).fetchFavouritesPlans();
       final appProvider = Provider.of<AppProvider>(context, listen: false);
-      appProvider.fetchAndSaveVideos();  // Then update from Firebase
-      appProvider.loadVideosFromPrefs(); // Load locally first
+      await appProvider.fetchAndSaveVideos();  // Then update from Firebase
+      await appProvider.loadVideosFromPrefs(); // Load locally first
+      await FirebaseMessaging.instance.getToken().then((token) {
+        _usersDetailsRef.child(Provider.of<PlanProvider>(context, listen: false).loggedUserId)
+            .update({'fcmToken': token});
+      });
     });
   }
 
@@ -230,7 +237,7 @@ class _PlansScreenState extends State<PlansScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => PlanDetailScreen(plan: plan)),
+                        builder: (_) => PlanDetailScreen(plan: plan,isShared: false,)),
                   );
                 },
               ),
@@ -529,6 +536,7 @@ class _PlansScreenState extends State<PlansScreen> {
                 print('Open Contact Support');
                 break;
               case 'logout':
+                await planProvider.resetLoggedId();
                 await authProvider.logout();
                 if (!context.mounted) return;
                 Navigator.pushReplacementNamed(
@@ -680,7 +688,7 @@ class _PlansScreenState extends State<PlansScreen> {
                         onReorder: (oldIndex, newIndex) {
                           // Prevent reordering if AddCollectionCard is involved
                           if (oldIndex >= planProvider.folders.length ||
-                              newIndex > planProvider.folders.length - 1) {
+                              newIndex > planProvider.folders.length - 1 || planProvider.loggedUserId != planProvider.folders[oldIndex].userId) {
                             return; // Do nothing if trying to reorder the AddCollectionCard
                           }
                           planProvider.reorderFolders(oldIndex, newIndex);
@@ -695,9 +703,10 @@ class _PlansScreenState extends State<PlansScreen> {
                               // 🔑 Required key for reordering
                               margin: const EdgeInsets.symmetric(horizontal: 8),
                               child: CollectionCard(
-                                title: collection.name ?? '',
+                                folder: collection,
                                 count: planProvider
-                                    .getPlanCountForFolder(collection.id!),
+                                    .getPlanCountForFolder(collection),
+                                userId: planProvider.loggedUserId,
                                 onTap: () {
                                   planProvider.filterPlans("", null);
                                   planProvider.applyTagFilter([], null);
@@ -705,7 +714,8 @@ class _PlansScreenState extends State<PlansScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => FolderPlansScreen(
-                                          folderId: collection.id!),
+                                          folderId: collection.id!,isShared:
+                                        false,),
                                     ),
                                   );
                                 },
@@ -839,7 +849,7 @@ class _PlansScreenState extends State<PlansScreen> {
                 child: planProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : planProvider.plans
-                            .where((plan) => plan.folderId.isEmpty)
+                            .where((plan) => plan.folderId.isEmpty && plan.userId == planProvider.loggedUserId)
                             .isEmpty
                         ? Center(
                             child: Padding(
@@ -865,11 +875,12 @@ class _PlansScreenState extends State<PlansScreen> {
                                         fontWeight: FontWeight.bold)),
                               ),
                               ...planProvider.plans
-                                  .where((plan) => plan.folderId.isEmpty)
+                                  .where((plan) => plan.folderId.isEmpty && plan.userId == planProvider.loggedUserId)
                                   .map(
                                     (plan) => TechniqueCard(
                                       plan: plan,
                                       planProvider: planProvider,
+                                      folderId: '',
                                       onMore: () {
                                         // Handle more actions
                                         showTechniqueOptions(

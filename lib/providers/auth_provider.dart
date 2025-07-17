@@ -51,6 +51,7 @@ class AuthProvider with ChangeNotifier {
 
       prefs.setString('user_email', _user!.email!);
 
+
       notifyListeners();
     } catch (e) {
       throw e;
@@ -85,7 +86,7 @@ class AuthProvider with ChangeNotifier {
         'username': username,
       });
 
-      await _usersDetailsRef.child(username).set({
+      await _usersDetailsRef.child(username).update({
         'id':userId,
         'username': username,
         'email':_user!.email,
@@ -135,7 +136,7 @@ class AuthProvider with ChangeNotifier {
         // If the username does not exist, create a default one
         String defaultUsername = await _generateDefaultUsername();
         await _usernamesRef.child(_user!.uid).set({'username': defaultUsername});
-        await _usersDetailsRef.child(defaultUsername).set({
+        await _usersDetailsRef.child(defaultUsername).update({
           'id':_user!.uid,
           'username': defaultUsername,
           'email':_user!.email,
@@ -146,7 +147,16 @@ class AuthProvider with ChangeNotifier {
       } else {
         // Save the existing username in session
         final value = userSnapshot.value as Map?;
-        prefs.setString('user_name', value?['username']);
+        final String username = value?['username'];
+        prefs.setString('user_name', username);
+
+        await _usersDetailsRef.child(username).update({
+          'id':_user!.uid,
+          'username': username,
+          'email':_user!.email,
+          'type':'google'
+        });
+
       }
       prefs.setString('user_email', _user!.email!);
 

@@ -10,6 +10,8 @@ class TechniqueCard extends StatelessWidget {
   final bool isStatus;
   final bool isCollectionSelectionEnable;
   final VoidCallback? onMore;
+  final String folderId;
+  final bool isShared;
 
   const TechniqueCard({
     super.key,
@@ -19,6 +21,8 @@ class TechniqueCard extends StatelessWidget {
     this.isStatus = false,
     this.isCollectionSelectionEnable = false,
     this.onMore,
+    required this.folderId,
+    this.isShared = false
   });
 
   @override
@@ -40,7 +44,7 @@ class TechniqueCard extends StatelessWidget {
               onLongPress: (){
                 planProvider.enterSelectionMode(plan.id);
               },
-              onTap: (){
+              onTap: folderId.isNotEmpty && plan.folderId != folderId && !plan.isShared ? null : (){
                 if (planProvider.isSelectionMode) {
                   planProvider.toggleSelection(plan.id);
                 }
@@ -49,7 +53,7 @@ class TechniqueCard extends StatelessWidget {
                   // AppAnalytics.logCardLinkClicked(isParent ? 'child':'parent', plan.id);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plan)),
+                    MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: plan,isShared: isShared,)),
                   );
                 }
               },
@@ -83,9 +87,14 @@ class TechniqueCard extends StatelessWidget {
                     child: Text(plan.title,
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
+                  if(folderId.isNotEmpty && plan.folderId != folderId && !plan.isShared)
+                  IconButton(
+                    icon: Icon(Icons.lock_outline),
+                    onPressed: null,
+                  ),
                   IconButton(
                     icon: Icon(Icons.more_vert),
-                    onPressed: onMore,
+                    onPressed: folderId.isNotEmpty && plan.folderId != folderId && !plan.isShared ? null : onMore,
                   ),
                 ],
               ),
@@ -107,6 +116,11 @@ class TechniqueCard extends StatelessWidget {
                   )).toList(),
                 ),
               ),
+            if(folderId.isNotEmpty && plan.folderId != folderId && !plan.isShared)
+            ...[
+             const SizedBox(height: 2,),
+            Text('Technique not available',style: TextStyle(color: Colors.red,fontStyle: FontStyle.italic),)
+            ]
           ],
         ),
       ),

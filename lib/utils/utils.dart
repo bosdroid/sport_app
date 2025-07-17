@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -21,6 +22,23 @@ class Util {
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    ) ??
+        false; // Return false if dialog is dismissed
+  }
+
+  static Future<bool> showMessageDialog(BuildContext context,String text) async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Warning!',style: TextStyle(fontSize: 16)),
+        content: Text(text,style: TextStyle(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Ok', style: TextStyle(fontSize: 18)),
           ),
         ],
       ),
@@ -328,6 +346,13 @@ class Util {
         );
       },
     );
+  }
+
+  static String timeAgo(int timestamp) {
+    final diff = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(timestamp));
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 
 }

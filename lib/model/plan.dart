@@ -1,5 +1,7 @@
 import 'package:bjj_dairy/model/video_entry.dart';
 
+import 'comment.dart';
+
 class Plan {
   final String id;
   final String userId;
@@ -15,22 +17,76 @@ class Plan {
   List<String> images;
   String note;
   String folderId;
+  bool isShared;
 
-  Plan(
-      {required this.id,
-        required this.userId,
-      required this.title,
-      required this.description,
-      required this.videos,
-      required this.timestamp,
-      this.from = const [],
-      this.to = const [],
-      this.isExpanded = false,
-      this.tags = const [],
-      this.status = 'neutral',
-      this.images = const [],
-      this.note = '',
-      this.folderId = ''});
+  // 👇 New fields
+  List<String> likedBy; // userIds who liked
+  List<String> favouritedBy; // userIds who favourited
+  List<Comment> comments; // list of comments
+
+  Plan({
+    required this.id,
+    required this.userId,
+    required this.title,
+    required this.description,
+    required this.videos,
+    required this.timestamp,
+    this.from = const [],
+    this.to = const [],
+    this.isExpanded = false,
+    this.tags = const [],
+    this.status = 'neutral',
+    this.images = const [],
+    this.note = '',
+    this.folderId = '',
+    this.likedBy = const [],
+    this.favouritedBy = const [],
+    this.comments = const [],
+    this.isShared = false
+  });
+
+  Plan copyWith({
+    String? id,
+    String? userId,
+    String? title,
+    String? description,
+    List<VideoEntry>? videos,
+    int? timestamp,
+    List<String>? from,
+    List<String>? to,
+    bool? isExpanded,
+    List<String>? tags,
+    String? status,
+    List<String>? images,
+    String? note,
+    String? folderId,
+    bool? isShared,
+    List<String>? likedBy,
+    List<String>? favouritedBy,
+    List<Comment>? comments,
+  }) {
+    return Plan(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      videos: videos != null ? List<VideoEntry>.from(videos) : videos == null && this.videos != null ? List<VideoEntry>.from(this.videos!) : [],
+      timestamp: timestamp ?? this.timestamp,
+      from: from != null ? List<String>.from(from) : List<String>.from(this.from),
+      to: to != null ? List<String>.from(to) : List<String>.from(this.to),
+      isExpanded: isExpanded ?? this.isExpanded,
+      tags: tags != null ? List<String>.from(tags) : List<String>.from(this.tags),
+      status: status ?? this.status,
+      images: images != null ? List<String>.from(images) : List<String>.from(this.images),
+      note: note ?? this.note,
+      folderId: folderId ?? this.folderId,
+      isShared: isShared ?? this.isShared,
+      likedBy: likedBy != null ? List<String>.from(likedBy) : List<String>.from(this.likedBy),
+      favouritedBy: favouritedBy != null ? List<String>.from(favouritedBy) : List<String>.from(this.favouritedBy),
+      comments: comments != null ? List<Comment>.from(comments) : List<Comment>.from(this.comments),
+    );
+  }
+
 
   factory Plan.fromMap(Map<String, dynamic> data) {
     return Plan(
@@ -49,14 +105,23 @@ class Plan {
         tags: List<String>.from(data['tags'] ?? []),
         status: data['status'] ?? 'neutral',
         images: List<String>.from(data['images'] ?? []),
-        note:data['note'] ?? '',
-        folderId:data['folderId'] ?? '');
+        note: data['note'] ?? '',
+        folderId: data['folderId'] ?? '',
+        likedBy: List<String>.from(data['likedBy'] ?? []),
+        favouritedBy: List<String>.from(data['favouritedBy'] ?? []),
+      comments: (data['comments'] as Map?)?.entries.map((entry) {
+        final commentMap = Map<String, dynamic>.from(entry.value);
+        commentMap['id'] = entry.key; // set Firebase key as comment ID
+        return Comment.fromMap(commentMap);
+      }).toList() ?? [],
+      isShared: data['isShared'] ?? false,
+    );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'id':id,
-      'userId':userId,
+      'id': id,
+      'userId': userId,
       'title': title,
       'description': description,
       'videos': videos!.map((v) => v.toMap()).toList(),
@@ -66,8 +131,12 @@ class Plan {
       'tags': tags,
       'status': status,
       'images': images,
-      'note':note,
-      'folderId':folderId
+      'note': note,
+      'folderId': folderId,
+      'likedBy': likedBy,
+      'favouritedBy': favouritedBy,
+      'comments': comments,
+      'isShared': isShared
     };
   }
 
@@ -97,7 +166,7 @@ class Plan {
         status: 'neutral',
         images: [],
         note: '',
-    folderId: '');
+        folderId: '',isShared: false);
   }
 
   DateTime get dateTime => DateTime.fromMillisecondsSinceEpoch(timestamp);

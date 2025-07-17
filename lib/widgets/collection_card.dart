@@ -1,15 +1,18 @@
+import 'package:bjj_dairy/model/folder.dart';
 import 'package:flutter/material.dart';
 
 class CollectionCard extends StatelessWidget {
-  final String title;
+  final Folder folder;
   final int count;
+  final String userId;
   final VoidCallback onTap;
   final VoidCallback onMore;
 
   const CollectionCard({
     super.key,
-    required this.title,
+    required this.folder,
     required this.count,
+    required this.userId,
     required this.onTap,
     required this.onMore,
   });
@@ -30,15 +33,55 @@ class CollectionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.folder, size: 32, color: Colors.black),
+                if(userId != folder.userId)
+                ...[
+                  Row(
+                    children: [
+                      Text(
+                        'owner: ',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.red),
+                      ),
+                      Text(
+                        userId,
+                        maxLines: 1,
+                        style: TextStyle(
+                            fontSize: 10, fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 4,
+                  )
+                ],
+                Row(
+                  children: [
+                    const Icon(Icons.folder, size: 32, color: Colors.black),
+                    const SizedBox(width: 2,),
+                    Icon(
+                      folder.access == 'public'
+                          ? Icons.public
+                          : folder.access == 'private'
+                          ? Icons.lock
+                          : folder.access == 'specific'
+                          ? Icons.group
+                          : Icons.help_outline,
+                      size: 20,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 Expanded(
                   child: Text(
-                    title[0].toUpperCase() + title.substring(1),
+                    folder.name![0].toUpperCase() + folder.name!.substring(1),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                     maxLines: 1,
                   ),
                 ),
+                // if(count > 0)
                 Expanded(
                   child: Text(
                     '$count techniques',

@@ -12,6 +12,8 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../model/comment.dart';
+import '../model/favourite.dart';
 import '../model/plan.dart';
 import '../model/selected_image.dart';
 import '../services/image_service.dart';
@@ -24,6 +26,8 @@ class PlanProvider with ChangeNotifier {
       FirebaseDatabase.instance.ref().child('FOLDERS/');
   final DatabaseReference _shareIdsRef =
   FirebaseDatabase.instance.ref().child('SHARE_IDS/');
+  final DatabaseReference _usersDetailsRef = FirebaseDatabase.instance.ref().child('USERS_DETAILS/');
+  final DatabaseReference _favouritesRef = FirebaseDatabase.instance.ref().child('FAVOURITES/');
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final List<String> _suggestedTags = [
     'submissions',
@@ -31,8 +35,13 @@ class PlanProvider with ChangeNotifier {
     'pressure',
     'defense'
   ];
+
+  String _loggedUserId = '';
+  String get loggedUserId => _loggedUserId;
   List<Plan> _allPlans = [];
   List<Plan> _plans = [];
+  List<Plan> _favouritesPlans = [];
+  List<Plan> _sharedFolderPlans = [];
   List<Folder> _folders = [];
   List<Folder> _searchFolders = [];
 
@@ -41,9 +50,9 @@ class PlanProvider with ChangeNotifier {
   bool _isLoading = false;
   List<Plan> _filteredPlans = [];
 
-  // List<Plan> get plans => _filteredPlans.isNotEmpty ? _filteredPlans : _plans;
+  List<Plan> get sharedFolderPlans => _sharedFolderPlans;
   List<Plan> get plans => _plans;
-
+  List<Plan> get favouritesPlans => _favouritesPlans;
   bool get isLoading => _isLoading;
   Timer? _debounce;
   Plan? _selectedPlan;
@@ -65,6 +74,13 @@ class PlanProvider with ChangeNotifier {
   Set<String> selectedPlanIds = {};
   bool isSelectionMode = false;
   late ValidationProvider _validationProvider;
+  bool _isFolderAccessValid = false;
+  bool get isFolderAccessValid => _isFolderAccessValid;
+
+  Future<void> resetLoggedId()async {
+    _loggedUserId = '';
+    notifyListeners();
+  }
 
   void updateDependencies(ValidationProvider validationProvider) {
     _validationProvider = validationProvider;
@@ -131,9 +147,10 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
-  List<String> getAllCollectionTags(String cid) {
-    final allTags = _allPlans
-        .where((plan) => plan.folderId == cid)
+  List<String> getAllCollectionTags(String cid,{bool isShared = false}) {
+    final list = isShared ? [..._sharedFolderPlans,..._favouritesPlans] : [..._plans,..._favouritesPlans];
+    final allTags = list
+        .where((plan) => plan.folderId == cid || plan.isShared)
         .expand((plan) => plan.tags)
         .toSet()
         .toList();
@@ -153,8 +170,15 @@ class PlanProvider with ChangeNotifier {
     return ['All', ...allTags];
   }
 
-  int getPlanCountForFolder(String folderId) {
-    return _allPlans.where((plan) => plan.folderId == folderId).length;
+  // int getPlanCountForFolder(Folder folder) {
+  //   return _allPlans.where((plan) => plan.folderId == folder.id).length | 0;
+  // }
+  int getPlanCountForFolder(Folder folder) {
+    if (folder.name!.toLowerCase() == 'favourites') {
+      return _allPlans.where((plan) => plan.folderId == folder.id).length + _favouritesPlans.length;
+    } else {
+      return _allPlans.where((plan) => plan.folderId == folder.id).length;
+    }
   }
 
   String generateRandomShareId({int length = 6}) {
@@ -280,6 +304,7 @@ class PlanProvider with ChangeNotifier {
     await _shareIdsRef.child(shareId).set(folderId);
   }
 
+
   Future<void> fetchFolders() async {
     final prefs = await SharedPreferences.getInstance();
     final String userId = prefs.getString('user_name') ?? '';
@@ -287,6 +312,7 @@ class PlanProvider with ChangeNotifier {
     final DataSnapshot snapshot = await _foldersRef.orderByChild('userId').equalTo(userId).get();            // /folders
     if (!snapshot.exists) {
       _folders = [];
+      await _createDefaultFavouritesFolder(userId);
       notifyListeners();
       return;
     }
@@ -296,11 +322,17 @@ class PlanProvider with ChangeNotifier {
 
     // ── 1.  Add a shareId where it’s missing ────────────────────────
     final List<Future<void>> pendingUpdates = [];
+    bool hasFavourites = false;
 
     data.forEach((folderId, raw) {
       final folderData = Map<String, dynamic>.from(raw);
 
       if (folderData['userId'] != userId) return;
+
+      // Check for Favourites folder
+      if ((folderData['name']?.toString().toLowerCase() ?? '') == 'favourites') {
+        hasFavourites = true;
+      }
 
       // No shareId?  Create & queue an update
       if (folderData['shareId'] == null || (folderData['shareId'] as String).isEmpty) {
@@ -308,17 +340,42 @@ class PlanProvider with ChangeNotifier {
       }
     });
 
+    // Create Favourites if it doesn't exist
+    if (!hasFavourites) {
+      await _createDefaultFavouritesFolder(userId);
+    }
+
     // Wait until every missing‑shareId folder is fixed in Firebase
     if (pendingUpdates.isNotEmpty) await Future.wait(pendingUpdates);
 
     // ── 2.  Build the local list (now guaranteed to have shareIds) ──
     _folders = data.entries
         .map((e) => Folder.fromMap(Map<String, dynamic>.from(e.value)))
-        .where((f) => f.userId == userId)
+        .where((f) => (f.userId == userId || f.allowedUsers.contains(userId)))
         .toList()
       ..sort((a, b) => a.order.compareTo(b.order));
 
     notifyListeners();
+  }
+
+  Future<void> _createDefaultFavouritesFolder(String userId) async {
+    final String folderId = _foldersRef.child(userId).push().key!;
+    String shareId;
+    do {
+      shareId = generateRandomShareId();          // e.g. “X7Q9b2”
+    } while (!(await isShareIdUnique(shareId)));
+
+    final newFolder = Folder(
+      id: folderId,
+      userId: userId,
+      name: 'Favourites',
+      order: _folders.length,
+      shareId: shareId,
+      access: 'private', // default access
+      allowedUsers: [], // initially empty
+    );
+    _folders.add(newFolder);
+    await _foldersRef.child(folderId).set(newFolder.toMap());
   }
 
   Future<void> searchPublicFolders(String shareId) async {
@@ -336,7 +393,7 @@ class PlanProvider with ChangeNotifier {
 
     _searchFolders = data.entries
         .map((e) => Folder.fromMap(Map<String, dynamic>.from(e.value)))
-        .where((f) => f.access == 'public')
+        // .where((f) => f.access == 'public')
         .toList()
       ..sort((a, b) => a.order.compareTo(b.order));
 
@@ -359,6 +416,119 @@ class PlanProvider with ChangeNotifier {
     // }
   }
 
+  Future<void> copySharedFolderWithTechniques(Folder folder) async{
+    final prefs = await SharedPreferences.getInstance();
+    final String userId = prefs.getString("user_name") as String;
+
+    // Step 1: Check if folder with same name already exists
+    Folder? existingFolder;
+    for (final Folder f in _folders) {
+      if (f.name!.toLowerCase() == folder.name!.toLowerCase()) {
+        existingFolder = f;
+        break;
+      }
+    }
+    String? targetFolderId;
+
+    if (existingFolder != null) {
+      // Use existing folder
+      targetFolderId = existingFolder.id;
+    } else {
+      // Create a new folder with the same name
+      final String newFolderId = _foldersRef.push().key!;
+
+      // Generate a unique shareId
+      String shareId;
+      do {
+        shareId = generateRandomShareId();
+      } while (!(await isShareIdUnique(shareId)));
+
+      final newFolder = Folder(
+        id: newFolderId,
+        userId: userId,
+        name: folder.name,
+        order: _folders.length,
+        shareId: shareId,
+        access: 'private',
+        allowedUsers: [],
+      );
+
+      await _foldersRef.child(newFolderId).set(newFolder.toMap());
+      await _shareIdsRef.child(shareId).set(newFolderId);
+      _folders.add(newFolder);
+      notifyListeners();
+
+      targetFolderId = newFolderId;
+    }
+
+    final Set<String> loadedPlanIds = {}; // Tracks only connected (from/to) plan IDs
+    final List<Plan> allPlans = [];
+
+
+      // Step 1: Fetch main plans for the folder
+      final snapshot = await _plansRef.orderByChild('folderId').equalTo(folder.id).get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final rawData = snapshot.value;
+        debugPrint("Fetched Data: $rawData");
+
+        if (rawData is Map<Object?, Object?>) {
+          for (final entry in rawData.entries) {
+            final value = entry.value;
+            if (value is Map<Object?, Object?>) {
+              final data = value.map((k, v) => MapEntry(k.toString(), v));
+              final plan = Plan.fromMap(data);
+
+              allPlans.add(plan); // Always add the main plan
+              debugPrint("Main Plan: ${plan.id}");
+
+              // Step 2: Fetch parent plans using `plan.to`
+              for (String parentId in plan.to) {
+                if (loadedPlanIds.add(parentId)) {
+                  await fetchSinglePlanById(parentId, allPlans);
+                }
+              }
+
+              // Step 3: Fetch child plans using `plan.from`
+              for (String childId in plan.from) {
+                if (loadedPlanIds.add(childId)) {
+                  await fetchSinglePlanById(childId, allPlans);
+                }
+              }
+            }
+          }
+        }
+      }
+
+    // Step 3: Clone plans with new userId and folderId
+    for (final plan in allPlans) {
+      if (plan.folderId != folder.id) continue;
+
+      final String newPlanId = _plansRef.push().key!;
+
+      final Plan newPlan = Plan(
+        id: newPlanId,
+        userId: userId,
+        title: plan.title,
+        description: plan.description,
+        videos: plan.videos,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        // from: plan.from,
+        // to: plan.to,
+        isExpanded: false,
+        tags: List<String>.from(plan.tags),
+        status: plan.status,
+        images: List<String>.from(plan.images),
+        note: plan.note,
+        folderId: targetFolderId!,
+      );
+
+      _plans.add(newPlan);
+      await _plansRef.child(newPlanId).set(newPlan.toMap());
+    }
+    _plans = _plans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    notifyListeners();
+  }
 
   // Future<void> fetchFolders() async {
   //   final prefs = await SharedPreferences.getInstance();
@@ -382,7 +552,6 @@ class PlanProvider with ChangeNotifier {
   //
   //   notifyListeners();
   // }
-
 
   Future<void> deleteFolder(Folder folder) async {
     final prefs = await SharedPreferences.getInstance();
@@ -556,48 +725,277 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> likePlan(String planId, String userId, {bool isShared = false}) async {
+    final targetLists = isShared ? [_sharedFolderPlans, _favouritesPlans] : [_plans, _favouritesPlans];
+
+    for (var list in targetLists) {
+      final index = list.indexWhere((p) => p.id == planId);
+      if (index != -1) {
+        final plan = list[index];
+
+        if (!plan.likedBy.contains(userId)) {
+          // Update local state
+          plan.likedBy.add(userId);
+          notifyListeners();
+
+          // Update Firebase
+          await _plansRef.child(planId).update({'likedBy': plan.likedBy});
+        }
+        break; // Stop after first match
+      }
+    }
+  }
+
+  Future<void> toggleFavourite(String planId, String userId, bool isShared) async {
+    final targetLists = isShared ? [_sharedFolderPlans, _favouritesPlans] : [_plans, _favouritesPlans];
+
+    for (var list in targetLists) {
+      final index = list.indexWhere((p) => p.id == planId);
+      if (index != -1) {
+        final plan = list[index];
+        final planRef = _plansRef.child(planId);
+        final isFavourited = plan.favouritedBy.contains(userId);
+
+        // Toggle locally
+        if (isFavourited) {
+          plan.favouritedBy.remove(userId);
+        } else {
+          plan.favouritedBy.add(userId);
+        }
+
+        notifyListeners();
+
+        // Update plan in Firebase
+        await planRef.update({'favouritedBy': plan.favouritedBy});
+
+        // Update favourites node
+        if (isFavourited) {
+          final snapshot = await _favouritesRef.orderByChild("userId").equalTo(userId).get();
+
+          if (snapshot.exists && snapshot.value != null) {
+            final data = Map<String, dynamic>.from(snapshot.value as Map);
+            data.forEach((key, value) {
+              if (value['planId'] == planId) {
+                _favouritesRef.child(key).remove();
+              }
+            });
+          }
+        } else {
+          final String id = _favouritesRef.push().key!;
+          final favourite = Favourite(id: id, userId: userId, planId: planId);
+          await _favouritesRef.child(id).set(favourite.toMap());
+        }
+
+        // break; // Stop after first match
+      }
+    }
+
+    await fetchFavouritesPlans();
+  }
+
+  Future<void> addComment(String planId, String userId, String username, String text, {bool isShared = false}) async {
+    final String commentId = _plansRef.child('$planId/comments').push().key!;
+    final comment = Comment(
+      id: commentId,
+      userId: userId,
+      username: username,
+      text: text,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    final targetLists = isShared ? [_sharedFolderPlans, _favouritesPlans] : [_plans, _favouritesPlans];
+
+    for (var list in targetLists) {
+      final index = list.indexWhere((p) => p.id == planId);
+      if (index != -1) {
+        list[index].comments.insert(0, comment);
+        notifyListeners();
+        break; // Stop after first match
+      }
+    }
+
+    final commentRef = _plansRef.child('$planId/comments').child(commentId);
+    await commentRef.set(comment.toMap());
+  }
+
+  Future<void> deleteComment(String planId, String commentId) async {
+    final index = _plans.indexWhere((item) => item.id == planId);
+    if (index == -1) return;
+
+    // Remove from local comment list
+    _plans[index].comments.removeWhere((comment) => comment.id == commentId);
+
+    // Delete from Firebase
+    await _plansRef.child('$planId/comments/$commentId').remove();
+
+    notifyListeners();
+  }
+
+
+  Future<void> fetchShareFolderPlans(String fId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final Set<String> loadedPlanIds = {}; // Tracks only connected (from/to) plan IDs
+    final List<Plan> allPlans = [];
+
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final String userId = prefs.getString("user_name") ?? '';
+
+    try {
+      // Step 1: Fetch main plans for the folder
+      final snapshot = await _plansRef.orderByChild('folderId').equalTo(fId).get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final rawData = snapshot.value;
+        debugPrint("Fetched Data: $rawData");
+
+        if (rawData is Map<Object?, Object?>) {
+          for (final entry in rawData.entries) {
+            final value = entry.value;
+            if (value is Map<Object?, Object?>) {
+              final data = value.map((k, v) => MapEntry(k.toString(), v));
+              final plan = Plan.fromMap(data);
+
+              allPlans.add(plan); // Always add the main plan
+              debugPrint("Main Plan: ${plan.id}");
+
+              // Step 2: Fetch parent plans using `plan.to`
+              for (String parentId in plan.to) {
+                if (loadedPlanIds.add(parentId)) {
+                  await fetchSinglePlanById(parentId, allPlans);
+                }
+              }
+
+              // Step 3: Fetch child plans using `plan.from`
+              for (String childId in plan.from) {
+                if (loadedPlanIds.add(childId)) {
+                  await fetchSinglePlanById(childId, allPlans);
+                }
+              }
+            }
+          }
+
+          _sharedFolderPlans = allPlans
+            ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        } else {
+          debugPrint("Fetched data is not a valid Map: $rawData");
+          _sharedFolderPlans = [];
+        }
+      } else {
+        debugPrint("No plans found for folder: $fId");
+        _sharedFolderPlans = [];
+      }
+    } catch (e, stackTrace) {
+      debugPrint("Error fetching plans: $e\n$stackTrace");
+      AppAnalytics.logErrorStateShown('404');
+      _sharedFolderPlans = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> checkFolderPermission(String userId, String folderId) async {
+    try {
+      final snapshot = await _foldersRef.child(folderId).get();
+
+      if (!snapshot.exists || snapshot.value == null) {
+        debugPrint("Folder not found: $folderId");
+        _isFolderAccessValid = false;
+        return false;
+      }
+
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+      final folder = Folder.fromMap(data);
+
+      // Check access type
+      if (folder.access == 'public') {
+        _isFolderAccessValid = true;
+        return true;
+      }
+
+      if (folder.access == 'specific' && folder.allowedUsers.contains(userId)) {
+        _isFolderAccessValid = true;
+        return true;
+      }
+
+      // If user is the folder owner, allow access too (optional)
+      if (folder.userId == userId) {
+        _isFolderAccessValid = true;
+        return true;
+      }
+      _isFolderAccessValid = false;
+      return false;
+    } catch (e) {
+      debugPrint("Error checking folder permission: $e");
+      _isFolderAccessValid = false;
+      return false;
+    }
+  }
+
+  /// Fetch a single plan by ID and add it to the list
+  Future<void> fetchSinglePlanById(String planId, List<Plan> allPlans) async {
+    try {
+      final snapshot = await _plansRef.child(planId).get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        final plan = Plan.fromMap(data);
+        allPlans.add(plan);
+        debugPrint("Fetched connected plan: ${plan.id}");
+      }
+    } catch (e) {
+      debugPrint("Failed to fetch plan $planId: $e");
+    }
+  }
+  StreamSubscription<DatabaseEvent>? _plansSubscription;
   // Future<void> fetchPlans() async {
   //   final user = _auth.currentUser;
   //   if (user == null) return;
   //
   //   final prefs = await SharedPreferences.getInstance();
   //   final String userId = prefs.getString("user_name") ?? '';
-  //
+  //   _loggedUserId = userId;
   //   _isLoading = true;
   //   notifyListeners();
   //
   //   try {
-  //     final snapshot = await _plansRef.child(userId).get();
+  //     final snapshot = await _plansRef.orderByChild('userId').equalTo(userId).get();
   //
   //     if (snapshot.exists && snapshot.value != null) {
   //       final rawData = snapshot.value;
-  //       debugPrint("Fetched Data: $rawData"); // Log the raw data
+  //       debugPrint("Fetched Data: $rawData");
   //
   //       if (rawData is Map<Object?, Object?>) {
-  //         _plans = rawData.entries
-  //             .map((entry) {
-  //               final key = entry.key.toString();
-  //               final value = entry.value;
+  //         final List<Plan> fetchedPlans = [];
   //
-  //               if (value is Map<Object?, Object?>) {
-  //                 final data = value.map((k, v) => MapEntry(k.toString(), v));
+  //         for (final entry in rawData.entries) {
+  //           final value = entry.value;
   //
-  //                 Plan plan = Plan.fromMap(data);
-  //                 debugPrint(
-  //                     "Plan ID: ${plan.id}, From: ${plan.from}, To: ${plan.to}"); // Debug
-  //                 return plan;
-  //               } else {
-  //                 debugPrint("Skipping invalid entry: Key=$key, Value=$value");
-  //                 return null;
-  //               }
-  //             })
-  //             .whereType<Plan>()
-  //             .toList();
-  //         _plans = _plans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  //           if (value is Map<Object?, Object?>) {
+  //             final data = value.map((k, v) => MapEntry(k.toString(), v));
+  //
+  //             final plan = Plan.fromMap(data);
+  //             if (plan.userId == userId) {
+  //               fetchedPlans.add(plan);
+  //               debugPrint("Plan ID: ${plan.id}, From: ${plan.from}, To: ${plan.to}");
+  //             } else {
+  //               debugPrint("Skipped plan with mismatched userId: ${plan.userId}");
+  //             }
+  //           } else {
+  //             debugPrint("Skipping invalid entry: Key=${entry.key}, Value=$value");
+  //           }
+  //         }
+  //
+  //         _plans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   //         _allPlans.addAll(_plans);
   //         updateAllTags();
   //       } else {
-  //         debugPrint("Fetched data is not a Map: $rawData");
+  //         debugPrint("Fetched data is not a valid Map: $rawData");
   //         _plans = [];
   //       }
   //     } else {
@@ -613,23 +1011,31 @@ class PlanProvider with ChangeNotifier {
   //     notifyListeners();
   //   }
   // }
-
   Future<void> fetchPlans() async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     final prefs = await SharedPreferences.getInstance();
     final String userId = prefs.getString("user_name") ?? '';
+    _loggedUserId = userId;
 
     _isLoading = true;
     notifyListeners();
 
-    try {
-      final snapshot = await _plansRef.orderByChild('userId').equalTo(userId).get();
+    // Cancel any previous subscription to avoid multiple listeners
+    await _plansSubscription?.cancel();
+
+    // Listen to changes in the plans for this user
+    _plansSubscription = _plansRef
+        .orderByChild('userId')
+        .equalTo(userId)
+        .onValue
+        .listen((DatabaseEvent event) {
+      final snapshot = event.snapshot;
 
       if (snapshot.exists && snapshot.value != null) {
         final rawData = snapshot.value;
-        debugPrint("Fetched Data: $rawData");
+        debugPrint("Live Data: $rawData");
 
         if (rawData is Map<Object?, Object?>) {
           final List<Plan> fetchedPlans = [];
@@ -653,26 +1059,96 @@ class PlanProvider with ChangeNotifier {
           }
 
           _plans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-          _allPlans.addAll(_plans);
+          _allPlans
+            ..clear()
+            ..addAll(_plans);
           updateAllTags();
         } else {
-          debugPrint("Fetched data is not a valid Map: $rawData");
           _plans = [];
+          debugPrint("Invalid map format received.");
         }
       } else {
-        debugPrint("No plans found for user: $userId");
         _plans = [];
+        debugPrint("No plans found.");
       }
-    } catch (e, stackTrace) {
-      debugPrint("Error fetching plans: $e\n$stackTrace");
+
+      _isLoading = false;
+      notifyListeners();
+    }, onError: (e) {
+      debugPrint("Error in realtime listener: $e");
       AppAnalytics.logErrorStateShown('404');
       _plans = [];
+      _isLoading = false;
+      notifyListeners();
+    });
+  }
+
+  Future<void> fetchFavouritesPlans() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final String userId = prefs.getString("user_name") ?? '';
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final snapshot = await _favouritesRef.orderByChild('userId').equalTo(userId).get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final rawData = snapshot.value;
+        debugPrint("Fetched FAVOURITES: $rawData");
+
+        if (rawData is Map<Object?, Object?>) {
+          final List<Plan> fetchedPlans = [];
+
+          for (final entry in rawData.entries) {
+            final value = entry.value;
+
+            if (value is Map<Object?, Object?>) {
+              final data = value.map((k, v) => MapEntry(k.toString(), v));
+              final favourite = Favourite.fromMap(Map<String, dynamic>.from(data));
+              final String planId = favourite.planId;
+
+              if (planId.isNotEmpty) {
+                final planSnapshot = await _plansRef.child(planId).get();
+
+                if (planSnapshot.exists && planSnapshot.value != null) {
+                  final planData = Map<String, dynamic>.from(planSnapshot.value as Map);
+                  final plan = Plan.fromMap(planData)..isShared = true;
+                  fetchedPlans.add(plan);
+
+                  debugPrint("Fetched Plan ID: ${plan.id}, From: ${plan.from}, To: ${plan.to}");
+                }
+              } else {
+                debugPrint("Empty planId in favourite entry: ${favourite.id}");
+              }
+            } else {
+              debugPrint("Skipping invalid favourite entry: Key=${entry.key}, Value=$value");
+            }
+          }
+
+          _favouritesPlans.clear();
+          _favouritesPlans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          print(_favouritesPlans);
+          updateAllTags();
+        } else {
+          debugPrint("FAVOURITES data is not a valid Map: $rawData");
+          _favouritesPlans = [];
+        }
+      } else {
+        debugPrint("No favourites found for user: $userId");
+        _favouritesPlans = [];
+      }
+    } catch (e, stackTrace) {
+      debugPrint("Error fetching favourite plans: $e\n$stackTrace");
+      AppAnalytics.logErrorStateShown('404');
+      _favouritesPlans = [];
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
-
 
   void updateAllTags() {
     if (_allTags.isNotEmpty) {
@@ -681,6 +1157,9 @@ class PlanProvider with ChangeNotifier {
     _allTags.addAll(['All', 'Start Position']);
     _allTags.addAll(_suggestedTags);
     for (var plan in _plans) {
+      _allTags.addAll(plan.tags);
+    }
+    for (var plan in _favouritesPlans) {
       _allTags.addAll(plan.tags);
     }
     _allTags = _allTags.toSet().toList();
@@ -1294,11 +1773,21 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  List<Plan> getParentPlans(String planId) {
-    return _plans.where((plan) => plan.to.contains(planId)).toList();
+  List<Plan> getParentPlans(String planId,bool isShared) {
+    if(isShared){
+      return _sharedFolderPlans.where((plan) => plan.to.contains(planId)).toList();
+    }
+    else{
+      return _plans.where((plan) => plan.to.contains(planId)).toList();
+    }
   }
 
-  List<Plan> getChildPlans(String parentId) {
-    return _plans.where((plan) => plan.from.contains(parentId)).toList();
+  List<Plan> getChildPlans(String parentId,bool isShared) {
+    if(isShared){
+      return _sharedFolderPlans.where((plan) => plan.from.contains(parentId)).toList();
+    }
+    else{
+      return _plans.where((plan) => plan.from.contains(parentId)).toList();
+    }
   }
 }

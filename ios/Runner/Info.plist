@@ -50,5 +50,9 @@
       <string>fetch</string>
       <string>remote-notification</string>
     </array>
+    <key>GIDClientID</key>
+    <string>1037131909342-7l62b5m94nb7cbfnkb0l99n8ehgqmj77.apps.googleusercontent.com</string>
+    <key>com.apple.security.network.client</key>
+    <true/>
 </dict>
 </plist>
