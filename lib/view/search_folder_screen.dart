@@ -96,10 +96,11 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
               ListTile(
                 leading: const Icon(Icons.copy_all),
                 title: const Text('Copy Folder'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context); // Dismiss bottom sheet
                   // Use the outer context, not this builder context
-                  planProvider.copySharedFolderWithTechniques(collection);
+                  await planProvider.copySharedFolderWithTechniques(collection);
+                  await Util.showMessageDialog(context, 'All folder techniques has been copied!');
                 },
               ),
             ],
@@ -220,68 +221,64 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                 ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: planProvider.searchFolders.length,
-                  onReorder: (oldIndex, newIndex) {
-                    // // Prevent reordering if AddCollectionCard is involved
-                    // if (oldIndex >= planProvider.folders.length ||
-                    //     newIndex > planProvider.folders.length - 1) {
-                    //   return; // Do nothing if trying to reorder the AddCollectionCard
-                    // }
-                    // planProvider.reorderFolders(oldIndex, newIndex);
-                  },
+                  onReorder: (oldIndex, newIndex) {},
                   buildDefaultDragHandles: true,
-                  // Use default drag handles for draggable items
                   itemBuilder: (context, index) {
                     if (index < planProvider.searchFolders.length) {
                       final collection = planProvider.searchFolders[index];
+
                       return Container(
                         key: ValueKey(collection.id),
-                        // 🔑 Required key for reordering
                         margin: const EdgeInsets.symmetric(horizontal: 8),
-                        child: CollectionCard(
-                          folder: collection,
-                          count: 0,
-                          userId: planProvider.loggedUserId,
-                          onTap: () async {
-                            // planProvider.filterPlans("", null);
-                            // planProvider.applyTagFilter([], null);
-                            if(!isInternetAvailable){
-                              Util.showMessageDialog(context, 'Internet required to access this folder!');
-                              return;
-                            }
-                            if(collection.access == 'private'){
-                              Util.showMessageDialog(context, 'You do not have access to this folder!');
-                              return;
-                            }
-                            else if(collection.access == 'specific' && !collection.allowedUsers.contains(planProvider.loggedUserId)){
-                              Util.showMessageDialog(context, 'You do not have access to this folder!');
-                              return;
-                            }
-                            if(await planProvider.checkFolderPermission(planProvider.loggedUserId, collection.id!)){
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => FolderPlansScreen(
-                                    folderId: collection.id!,isShared: true,),
-                                ),
-                              );
-                            }
-                            else{
-                              Util.showMessageDialog(context, "You do not have access to this folder!");
-                            }
-                          },
-                          onMore: () {
-                            showCollectionOptions(
-                                context, collection, planProvider);
+                        child: FutureBuilder<int>(
+                          future: planProvider.getPlanCountForSearchFolder(collection),
+                          builder: (context, snapshot) {
+                            final count = snapshot.data ?? 0;
+
+                            return CollectionCard(
+                              folder: collection,
+                              count: count,
+                              userId: planProvider.loggedUserId,
+                              onTap: () async {
+                                if (!isInternetAvailable) {
+                                  Util.showMessageDialog(context, 'Internet required to access this folder!');
+                                  return;
+                                }
+                                if (collection.access == 'private') {
+                                  Util.showMessageDialog(context, 'You do not have access to this folder!');
+                                  return;
+                                } else if (collection.access == 'specific' &&
+                                    !collection.allowedUsers.contains(planProvider.loggedUserId)) {
+                                  Util.showMessageDialog(context, 'You do not have access to this folder!');
+                                  return;
+                                }
+
+                                if (await planProvider.checkFolderPermission(planProvider.loggedUserId, collection.id!)) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => FolderPlansScreen(
+                                        folderId: collection.id!,
+                                        isShared: true,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  Util.showMessageDialog(context, "You do not have access to this folder!");
+                                }
+                              },
+                              onMore: () {
+                                showCollectionOptions(context, collection, planProvider);
+                              },
+                            );
                           },
                         ),
                       );
                     } else {
-                      // AddCollectionCard with a fixed key, not draggable
-                      return SizedBox(
-                      );
+                      return const SizedBox();
                     }
                   },
-                ),
+                )
               ),
             ],
           ),

@@ -181,6 +181,25 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
+  Future<int> getPlanCountForSearchFolder(Folder folder) async {
+    try {
+      final snapshot = await _plansRef
+          .orderByChild('folderId')
+          .equalTo(folder.id)
+          .get();
+
+      if (snapshot.exists && snapshot.value is Map) {
+        final Map data = snapshot.value as Map;
+        return data.length;
+      }
+
+      return 0;
+    } catch (e) {
+      print('Error fetching plans for folder ${folder.id}: $e');
+      return 0;
+    }
+  }
+
   String generateRandomShareId({int length = 6}) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     final rand = Random();

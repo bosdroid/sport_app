@@ -45,7 +45,7 @@ class CollectionCard extends StatelessWidget {
                             color: Colors.red),
                       ),
                       Text(
-                        userId,
+                        folder.userId!,
                         maxLines: 1,
                         style: TextStyle(
                             fontSize: 10, fontStyle: FontStyle.italic),

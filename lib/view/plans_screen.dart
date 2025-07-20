@@ -499,7 +499,7 @@ class _PlansScreenState extends State<PlansScreen> {
   @override
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context,listen: true);
 
     return WillPopScope(
       onWillPop: () async {
@@ -702,27 +702,34 @@ class _PlansScreenState extends State<PlansScreen> {
                               key: ValueKey(collection.id),
                               // 🔑 Required key for reordering
                               margin: const EdgeInsets.symmetric(horizontal: 8),
-                              child: CollectionCard(
-                                folder: collection,
-                                count: planProvider
-                                    .getPlanCountForFolder(collection),
-                                userId: planProvider.loggedUserId,
-                                onTap: () {
-                                  planProvider.filterPlans("", null);
-                                  planProvider.applyTagFilter([], null);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => FolderPlansScreen(
-                                          folderId: collection.id!,isShared:
-                                        false,),
-                                    ),
-                                  );
-                                },
-                                onMore: () {
-                                  showCollectionOptions(
-                                      context, collection, planProvider);
-                                },
+                              child: FutureBuilder<int>(
+                              future: planProvider.getPlanCountForSearchFolder(collection),
+                              builder: (context, snapshot) {
+                                final count = snapshot.data ?? 0;
+                                return CollectionCard(
+                                  folder: collection,
+                                  count: count,
+                                  userId: planProvider.loggedUserId,
+                                  onTap: () {
+                                    planProvider.filterPlans("", null);
+                                    planProvider.applyTagFilter([], null);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            FolderPlansScreen(
+                                              folderId: collection.id!,
+                                              isShared:
+                                              false,),
+                                      ),
+                                    );
+                                  },
+                                  onMore: () {
+                                    showCollectionOptions(
+                                        context, collection, planProvider);
+                                  },
+                                );
+                              }
                               ),
                             );
                           } else {
