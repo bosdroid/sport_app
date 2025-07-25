@@ -17,7 +17,8 @@ class FolderPlansScreen extends StatefulWidget {
   final String folderId;
   final bool isShared;
 
-  const FolderPlansScreen({super.key, required this.folderId,required this.isShared});
+  const FolderPlansScreen(
+      {super.key, required this.folderId, required this.isShared});
 
   @override
   State<FolderPlansScreen> createState() => _FolderPlansScreenState();
@@ -30,8 +31,9 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if(widget.isShared){
-        Provider.of<PlanProvider>(context,listen: false).fetchShareFolderPlans(widget.folderId);
+      if (widget.isShared) {
+        Provider.of<PlanProvider>(context, listen: false)
+            .fetchShareFolderPlans(widget.folderId);
       }
     });
   }
@@ -213,7 +215,10 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => PlanDetailScreen(plan: plan,isShared: widget.isShared,)),
+                        builder: (_) => PlanDetailScreen(
+                              plan: plan,
+                              isShared: widget.isShared,
+                            )),
                   );
                 },
               ),
@@ -222,7 +227,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                 title: const Text('Move to Collection'),
                 onTap: () {
                   Navigator.pop(context);
-                  if(widget.isShared){
+                  if (widget.isShared) {
                     Util.showMessageDialog(context, 'No permission to move');
                     return;
                   }
@@ -243,7 +248,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                 title: const Text('Edit'),
                 onTap: () async {
                   Navigator.pop(context);
-                  if(widget.isShared){
+                  if (widget.isShared) {
                     Util.showMessageDialog(context, 'No permission to edit');
                     return;
                   }
@@ -266,7 +271,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                 title: const Text('Delete'),
                 onTap: () {
                   Navigator.pop(context);
-                  if(widget.isShared){
+                  if (widget.isShared) {
                     Util.showMessageDialog(context, 'No permission to edit');
                     return;
                   }
@@ -290,6 +295,11 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
   @override
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
+    final currentFolderPlanIds = planProvider.plans
+        .where((p) => p.folderId == widget.folderId)
+        .map((p) => p.id)
+        .toSet();
+
 
     return WillPopScope(
       onWillPop: () async {
@@ -414,7 +424,8 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                   padding: const EdgeInsets.symmetric(
                       vertical: 16.0, horizontal: 8.0),
                   child: TagSelector(
-                    tags: planProvider.getAllCollectionTags(widget.folderId,isShared: widget.isShared),
+                    tags: planProvider.getAllCollectionTags(widget.folderId,
+                        isShared: widget.isShared),
                     initialSelected: ['All'],
                     onTagsSelected: (List<String> selectedTags) {
                       List<String> list =
@@ -452,11 +463,20 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
               Expanded(
                 child: planProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : (!widget.isShared && [...planProvider.plans,...planProvider.favouritesPlans]
-                            // .where((plan) => plan.folderId == widget.folderId)
-                            .isEmpty) || (widget.isShared && [...planProvider.sharedFolderPlans,...planProvider.favouritesPlans]
-                    // .where((plan) => plan.folderId == widget.folderId || plan.isShared)
-                    .isEmpty)
+                    : (!widget.isShared &&
+                                [
+                                  ...planProvider.plans,
+                                  ...planProvider.favouritesPlans
+                                ]
+                                    // .where((plan) => plan.folderId == widget.folderId)
+                                    .isEmpty) ||
+                            (widget.isShared &&
+                                [
+                                  ...planProvider.sharedFolderPlans,
+                                  ...planProvider.favouritesPlans
+                                ]
+                                    // .where((plan) => plan.folderId == widget.folderId || plan.isShared)
+                                    .isEmpty)
                         ? Center(
                             child: Padding(
                               padding:
@@ -479,29 +499,42 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold)),
                               ),
-                              if(!widget.isShared)
-                                ...[...planProvider.plans,...planProvider.favouritesPlans]
-                                  .where((plan) =>
-                                      plan.folderId == widget.folderId || plan.isShared)
-                                  .map(
-                                    (plan) => TechniqueCard(
-                                      plan: plan,
-                                      planProvider: planProvider,
-                                      folderId: widget.folderId,
-                                      isShared: plan.isShared,
-                                      onMore: () {
-                                        // Handle more actions
-                                        showTechniqueOptions(
-                                            context, plan, planProvider);
-                                      },
-                                    ),
-                                  ),
-                              if(widget.isShared)
-                                ...[...planProvider.sharedFolderPlans,...planProvider.favouritesPlans]
-                                //     .where((plan) =>
-                                // plan.folderId == widget.folderId)
+                              if (!widget.isShared)
+                                ...[
+                                  ...planProvider.plans,
+                                  ...planProvider.favouritesPlans
+                                ]
+                                    .where((plan) =>
+                                plan.folderId == widget.folderId || // in current folder
+                                    plan.isShared || // is shared
+                                    (
+                                        plan.folderId != widget.folderId &&
+                                            (
+                                                plan.to.any((id) => currentFolderPlanIds.contains(id)) || // linked to a plan in this folder
+                                                    plan.from.any((id) => currentFolderPlanIds.contains(id))
+                                            )
+                                    )
+                                )
                                     .map(
                                       (plan) => TechniqueCard(
+                                    plan: plan,
+                                    planProvider: planProvider,
+                                    folderId: widget.folderId,
+                                    isShared: plan.isShared,
+                                    onMore: () {
+                                      showTechniqueOptions(context, plan, planProvider);
+                                    },
+                                  ),
+                                ),
+                              if (widget.isShared)
+                                ...[
+                                  ...planProvider.sharedFolderPlans,
+                                  ...planProvider.favouritesPlans
+                                ]
+                                    //     .where((plan) =>
+                                    // plan.folderId == widget.folderId)
+                                    .map(
+                                  (plan) => TechniqueCard(
                                     plan: plan,
                                     planProvider: planProvider,
                                     isShared: true,
@@ -607,25 +640,25 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
             // ),
             ,
             const SizedBox(height: 12),
-            if(!widget.isShared)
-            FloatingActionButton(
-              heroTag: 'addPlan',
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              mini: true,
-              onPressed: () async {
-                await Navigator.pushNamed(
-                  context,
-                  RoutesNames.addPlanScreen,
-                  arguments: {
-                    "parentId": '',
-                    "isConnection": false,
-                    "folderId": widget.folderId
-                  },
-                );
-              },
-              child: const Icon(Icons.add),
-            ),
+            if (!widget.isShared)
+              FloatingActionButton(
+                heroTag: 'addPlan',
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                mini: true,
+                onPressed: () async {
+                  await Navigator.pushNamed(
+                    context,
+                    RoutesNames.addPlanScreen,
+                    arguments: {
+                      "parentId": '',
+                      "isConnection": false,
+                      "folderId": widget.folderId
+                    },
+                  );
+                },
+                child: const Icon(Icons.add),
+              ),
           ],
         ),
       ),

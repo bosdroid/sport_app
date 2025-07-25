@@ -321,7 +321,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       ? null
                       : () => showUpdateNoteBottomSheet(
                           context, plan.id, plan.note, planProvider),
-                  child: Icon(Icons.edit,
+                  child: widget.isShared ? const SizedBox.shrink(): Icon(Icons.edit,
                       color: Theme.of(context).primaryColor, size: 20)),
             ],
           ),
@@ -1594,7 +1594,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     );
   }
 
-  void _showCommentBottomSheet(BuildContext context,PlanProvider planProvider, Plan plan, String userId) {
+  void _showCommentBottomSheet(BuildContext context, PlanProvider planProvider,
+      Plan plan, String userId) {
     final TextEditingController commentController = TextEditingController();
 
     showModalBottomSheet(
@@ -1633,11 +1634,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         return const Center(child: CircularProgressIndicator());
                       }
 
-                      if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+                      if (!snapshot.hasData ||
+                          snapshot.data!.snapshot.value == null) {
                         return const Center(child: Text("No comments yet."));
                       }
 
-                      final rawComments = Map<String, dynamic>.from(snapshot.data!.snapshot.value as Map);
+                      final rawComments = Map<String, dynamic>.from(
+                          snapshot.data!.snapshot.value as Map);
                       final comments = rawComments.entries.map((entry) {
                         final data = Map<String, dynamic>.from(entry.value);
                         return Comment.fromMap(data);
@@ -1655,21 +1658,28 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(comment.userId),
-                                const SizedBox(width: 2,),
+                                const SizedBox(
+                                  width: 2,
+                                ),
                                 Text('(${Util.timeAgo(comment.timestamp)})',
-                                    style: const TextStyle(fontSize: 12,color: Colors.grey))
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.grey))
                               ],
                             ),
-                            subtitle: Text(comment.text,style: TextStyle(fontSize: 18),),
-                            trailing: comment.userId == plan.userId ? IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () async {
-                              planProvider.deleteComment(
-                                  plan.id,
-                                comment.id
-                              );
-                            },
-                          ):const SizedBox.shrink(),
+                            subtitle: Text(
+                              comment.text,
+                              style: TextStyle(fontSize: 18),
+                            ),
+                            trailing: plan.userId == planProvider.loggedUserId
+                                ? IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red),
+                                    onPressed: () async {
+                                      planProvider.deleteComment(
+                                          plan.id, comment.id);
+                                    },
+                                  )
+                                : const SizedBox.shrink(),
                           );
                         },
                       );
@@ -1681,7 +1691,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
                 // Comment Input
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(
                     children: [
                       Expanded(
@@ -1700,7 +1711,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         onPressed: () async {
                           final text = commentController.text.trim();
                           if (text.isNotEmpty) {
-                            planProvider.addComment(plan.id, userId, '', text,isShared: widget.isShared);
+                            planProvider.addComment(plan.id, userId, '', text,
+                                isShared: widget.isShared);
                             commentController.clear();
                           }
                         },
@@ -1716,7 +1728,6 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
@@ -1726,11 +1737,11 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp)) // Sort by timestamp
       ..forEach((plan) => plan.isExpanded = false); // Reset isExpanded
 
-    List<Plan> childPlans =
-        planProvider.getChildPlans(plan!.id, (widget.isShared || widget.plan.isShared))
-          ..sort((a, b) =>
-              b.timestamp.compareTo(a.timestamp)) // Sort children by timestamp
-          ..forEach((plan) => plan.isExpanded = false); // Reset isExpanded
+    List<Plan> childPlans = planProvider.getChildPlans(
+        plan!.id, (widget.isShared || widget.plan.isShared))
+      ..sort((a, b) =>
+          b.timestamp.compareTo(a.timestamp)) // Sort children by timestamp
+      ..forEach((plan) => plan.isExpanded = false); // Reset isExpanded
 
     return WillPopScope(
       onWillPop: () async {
@@ -1802,14 +1813,17 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                               },
                             ),
                           ] else ...[
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.black),
-                              onPressed: () {
-                                if (!widget.isShared) {
-                                  _toggleEdit(planProvider);
-                                }
-                              },
-                            ),
+                            widget.isShared
+                                ? const SizedBox.shrink()
+                                : IconButton(
+                                    icon: const Icon(Icons.edit,
+                                        color: Colors.black),
+                                    onPressed: () {
+                                      if (!widget.isShared) {
+                                        _toggleEdit(planProvider);
+                                      }
+                                    },
+                                  ),
                           ],
                         ],
                       )
@@ -1874,6 +1888,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           ),
                   ),
                 ),
+                if(widget.isShared)
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text("You can't edit in view mode",style: TextStyle(color: Colors.red,fontSize: 18),),),
                 if (plan!.description.isNotEmpty || isEditing)
                   Container(
                     width: MediaQuery.of(context).size.width,
@@ -2022,40 +2039,43 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             const SizedBox(
                               height: 8,
                             ),
-                            GestureDetector(
-                              onTap: () {
-                                print('Add Video tapped');
-                                if (widget.isShared || plan!.isShared) {
-                                  return;
-                                }
-                                showAddVideosBottomSheet(
-                                    context, planProvider, plan!);
-                              },
-                              child: DottedBorder(
-                                color: Colors.grey,
-                                borderType: BorderType.RRect,
-                                radius: const Radius.circular(12),
-                                dashPattern: [6, 3],
-                                child: Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 10),
-                                  alignment: Alignment.center,
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.add, color: Colors.grey),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Add Video',
-                                        style: TextStyle(
-                                            color: Colors.grey,
-                                            fontWeight: FontWeight.w500),
+                            widget.isShared
+                                ? const SizedBox.shrink()
+                                : GestureDetector(
+                                    onTap: () {
+                                      print('Add Video tapped');
+                                      if (widget.isShared || plan!.isShared) {
+                                        return;
+                                      }
+                                      showAddVideosBottomSheet(
+                                          context, planProvider, plan!);
+                                    },
+                                    child: DottedBorder(
+                                      color: Colors.grey,
+                                      borderType: BorderType.RRect,
+                                      radius: const Radius.circular(12),
+                                      dashPattern: [6, 3],
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 10),
+                                        alignment: Alignment.center,
+                                        child: const Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.add, color: Colors.grey),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Add Video',
+                                              style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontWeight: FontWeight.w500),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
                           ],
                         )
                       ],
@@ -2299,12 +2319,14 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                   ),
                                 );
                               } else {
-                                return planProvider.isLoading
+                                return widget.isShared ? const SizedBox.shrink() :
+                                 planProvider.isLoading
                                     ? SizedBox(
                                         width: 100,
                                         height: 100,
                                         child: Center(
-                                            child: CircularProgressIndicator()))
+                                            child: CircularProgressIndicator()),
+                                      )
                                     : AddImageCard(onTap: () async {
                                         if (widget.isShared || plan!.isShared) {
                                           return;
@@ -2402,7 +2424,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                   ),
                           ),
                           // Add Button for Parent
-                          Container(
+                         widget.isShared ? const SizedBox.shrink(): Container(
                             width: MediaQuery.of(context).size.width,
                             padding: const EdgeInsets.only(right: 10),
                             child: GestureDetector(
@@ -2481,7 +2503,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                   ),
                           ),
                           // Add Button for Child
-                          Container(
+                          widget.isShared ? const SizedBox.shrink(): Container(
                             width: MediaQuery.of(context).size.width,
                             padding: const EdgeInsets.only(right: 10),
                             child: GestureDetector(
@@ -2523,15 +2545,20 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 6,),
+                const SizedBox(
+                  height: 6,
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     // Like Button
                     TextButton.icon(
                       onPressed: () {
-                        if (!plan!.likedBy.contains(planProvider.loggedUserId)) {
-                          planProvider.likePlan(plan!.id, planProvider.loggedUserId,isShared: widget.isShared);
+                        if (!plan!.likedBy
+                            .contains(planProvider.loggedUserId)) {
+                          planProvider.likePlan(
+                              plan!.id, planProvider.loggedUserId,
+                              isShared: widget.isShared);
                         }
                       },
                       icon: Icon(
@@ -2546,8 +2573,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     // Favourite Button
                     TextButton.icon(
                       onPressed: () {
-                        if(widget.isShared || plan!.userId != planProvider.loggedUserId){
-                        planProvider.toggleFavourite(plan!.id, planProvider.loggedUserId,widget.isShared);
+                        if (widget.isShared ||
+                            plan!.userId != planProvider.loggedUserId) {
+                          planProvider.toggleFavourite(plan!.id,
+                              planProvider.loggedUserId, widget.isShared);
                         }
                       },
                       icon: Icon(
@@ -2562,14 +2591,14 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     // Comment Button
                     TextButton.icon(
                       onPressed: () {
-                        _showCommentBottomSheet(context, planProvider,plan!, planProvider.loggedUserId);
+                        _showCommentBottomSheet(context, planProvider, plan!,
+                            planProvider.loggedUserId);
                       },
                       icon: const Icon(Icons.comment, color: Colors.green),
                       label: const Text('Comment'),
                     ),
                   ],
                 ),
-
               ],
             ),
           ),

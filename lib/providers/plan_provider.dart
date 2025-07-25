@@ -412,7 +412,7 @@ class PlanProvider with ChangeNotifier {
 
     _searchFolders = data.entries
         .map((e) => Folder.fromMap(Map<String, dynamic>.from(e.value)))
-        // .where((f) => f.access == 'public')
+        .where((f) => f.access == 'public' || (f.access == 'specific' && f.allowedUsers.contains(_loggedUserId)))
         .toList()
       ..sort((a, b) => a.order.compareTo(b.order));
 
@@ -883,18 +883,18 @@ class PlanProvider with ChangeNotifier {
               debugPrint("Main Plan: ${plan.id}");
 
               // Step 2: Fetch parent plans using `plan.to`
-              for (String parentId in plan.to) {
-                if (loadedPlanIds.add(parentId)) {
-                  await fetchSinglePlanById(parentId, allPlans);
-                }
-              }
+              // for (String parentId in plan.to) {
+              //   if (loadedPlanIds.add(parentId)) {
+              //     await fetchSinglePlanById(parentId, allPlans);
+              //   }
+              // }
 
               // Step 3: Fetch child plans using `plan.from`
-              for (String childId in plan.from) {
-                if (loadedPlanIds.add(childId)) {
-                  await fetchSinglePlanById(childId, allPlans);
-                }
-              }
+              // for (String childId in plan.from) {
+              //   if (loadedPlanIds.add(childId)) {
+              //     await fetchSinglePlanById(childId, allPlans);
+              //   }
+              // }
             }
           }
 
@@ -1437,7 +1437,7 @@ class PlanProvider with ChangeNotifier {
       await updateConnections(userId, parentId, planId);
     }
 
-    _plans.add(newPlan);
+    // _plans.add(newPlan);
     // _filteredPlans.add(newPlan);
     AppAnalytics.logCardCreated(planId);
     _plans = _plans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -1494,24 +1494,24 @@ class PlanProvider with ChangeNotifier {
         'images': uploadedImageUrls,
       });
 
-      final index = _plans.indexWhere((plan) => plan.id == updatedPlan.id);
-      if (index != -1) {
-        _plans[index] = Plan(
-          id: updatedPlan.id,
-          userId: updatedPlan.userId,
-          title: updatedPlan.title,
-          description: updatedPlan.description,
-          videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
-          tags: updatedPlan.tags,
-          folderId: updatedPlan.folderId,
-          images: uploadedImageUrls,
-          timestamp: updatedPlan.timestamp,
-          from: List.from(_plans[index].from),
-          to: List.from(_plans[index].to),
-        );
-        _allPlans = [];
-        _allPlans.addAll(_plans);
-      }
+      // final index = _plans.indexWhere((plan) => plan.id == updatedPlan.id);
+      // if (index != -1) {
+      //   _plans[index] = Plan(
+      //     id: updatedPlan.id,
+      //     userId: updatedPlan.userId,
+      //     title: updatedPlan.title,
+      //     description: updatedPlan.description,
+      //     videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
+      //     tags: updatedPlan.tags,
+      //     folderId: updatedPlan.folderId,
+      //     images: uploadedImageUrls,
+      //     timestamp: updatedPlan.timestamp,
+      //     from: List.from(_plans[index].from),
+      //     to: List.from(_plans[index].to),
+      //   );
+      //   _allPlans = [];
+      //   _allPlans.addAll(_plans);
+      // }
       AppAnalytics.logCardEdited(updatedPlan.id);
       resetVideoEntries();
       updateAllTags();
@@ -1568,24 +1568,24 @@ class PlanProvider with ChangeNotifier {
       });
 
       final index = _plans.indexWhere((plan) => plan.id == updatedPlan.id);
-      if (index != -1) {
-        _plans[index] = Plan(
-          id: updatedPlan.id,
-          userId: updatedPlan.userId,
-          title: updatedPlan.title,
-          description: updatedPlan.description,
-          videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
-          tags: updatedPlan.tags,
-          folderId: updatedPlan.folderId,
-          images: uploadedImageUrls,
-          timestamp: updatedPlan.timestamp,
-          from: List.from(_plans[index].from),
-          to: List.from(_plans[index].to),
-        );
-        // _filteredPlans[index] = _plans[index];
-        _allPlans = [];
-        _allPlans.addAll(_plans);
-      }
+      // if (index != -1) {
+      //   _plans[index] = Plan(
+      //     id: updatedPlan.id,
+      //     userId: updatedPlan.userId,
+      //     title: updatedPlan.title,
+      //     description: updatedPlan.description,
+      //     videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
+      //     tags: updatedPlan.tags,
+      //     folderId: updatedPlan.folderId,
+      //     images: uploadedImageUrls,
+      //     timestamp: updatedPlan.timestamp,
+      //     from: List.from(_plans[index].from),
+      //     to: List.from(_plans[index].to),
+      //   );
+      //   // _filteredPlans[index] = _plans[index];
+      //   _allPlans = [];
+      //   _allPlans.addAll(_plans);
+      // }
       AppAnalytics.logCardEdited(updatedPlan.id);
       resetVideoEntries();
       updateAllTags();
@@ -1613,13 +1613,13 @@ class PlanProvider with ChangeNotifier {
     try {
       await _plansRef.child(planId).update({'note': note});
 
-      final index = _plans.indexWhere((plan) => plan.id == planId);
-      if (index != -1) {
-        _plans[index].note = note;
-        // _filteredPlans[index].note = note;
-        _allPlans = [];
-        _allPlans.addAll(_plans);
-      }
+      // final index = _plans.indexWhere((plan) => plan.id == planId);
+      // if (index != -1) {
+      //   _plans[index].note = note;
+      //   // _filteredPlans[index].note = note;
+      //   _allPlans = [];
+      //   _allPlans.addAll(_plans);
+      // }
 
       _isLoading = false;
       notifyListeners();
@@ -1686,16 +1686,16 @@ class PlanProvider with ChangeNotifier {
       });
 
       // Update local cache
-      final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
-      if (parentIndex != -1) {
-        _plans[parentIndex].to.add(childId);
-        // _filteredPlans[parentIndex].to.add(childId);
-      }
-      final childIndex = _plans.indexWhere((plan) => plan.id == childId);
-      if (childIndex != -1) {
-        _plans[childIndex].from.add(parentId);
-        // _filteredPlans[childIndex].from.add(parentId);
-      }
+      // final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
+      // if (parentIndex != -1) {
+      //   _plans[parentIndex].to.add(childId);
+      //   // _filteredPlans[parentIndex].to.add(childId);
+      // }
+      // final childIndex = _plans.indexWhere((plan) => plan.id == childId);
+      // if (childIndex != -1) {
+      //   _plans[childIndex].from.add(parentId);
+      //   // _filteredPlans[childIndex].from.add(parentId);
+      // }
       _allPlans = [];
       _allPlans.addAll(_plans);
       notifyListeners();
@@ -1719,19 +1719,19 @@ class PlanProvider with ChangeNotifier {
         });
 
         // Update local cache
-        final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
-        if (parentIndex != -1) {
-          _plans[parentIndex].to.add(childId);
-          // _filteredPlans[parentIndex].to.add(childId);
-        }
+        // final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
+        // if (parentIndex != -1) {
+        //   _plans[parentIndex].to.add(childId);
+        //   // _filteredPlans[parentIndex].to.add(childId);
+        // }
       }
 
       // Update local cache for the child only once
-      final childIndex = _plans.indexWhere((plan) => plan.id == childId);
-      if (childIndex != -1) {
-        _plans[childIndex].from.addAll(parentIds);
-        //_filteredPlans[childIndex].from.addAll(parentIds);
-      }
+      // final childIndex = _plans.indexWhere((plan) => plan.id == childId);
+      // if (childIndex != -1) {
+      //   _plans[childIndex].from.addAll(parentIds);
+      //   //_filteredPlans[childIndex].from.addAll(parentIds);
+      // }
       _allPlans = [];
       _allPlans.addAll(_plans);
       notifyListeners();

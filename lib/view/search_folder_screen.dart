@@ -95,7 +95,7 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.copy_all),
-                title: const Text('Copy Folder'),
+                title: const Text('Get Folder'),
                 onTap: () async {
                   Navigator.pop(context); // Dismiss bottom sheet
                   // Use the outer context, not this builder context
@@ -115,6 +115,7 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
     return WillPopScope(
       onWillPop: () async {
+        planProvider.searchPublicFolders('');
         return true;
       },
       child: SafeArea(
@@ -179,11 +180,17 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                         : null,
                   ),
                   onChanged: (value) {
-                    if(!isInternetAvailable){
-                      Util.showMessageDialog(context, 'Internet required to search this folder!');
-                      return;
+                    if(value.isEmpty){
+                      planProvider.searchPublicFolders('');
                     }
-                    planProvider.searchPublicFolders(value);
+                    else{
+                      if(!isInternetAvailable){
+                        Util.showMessageDialog(context, 'Internet required to search this folder!');
+                        return;
+                      }
+                      planProvider.searchPublicFolders(value);
+                    }
+
                   },
                 ),
               ),

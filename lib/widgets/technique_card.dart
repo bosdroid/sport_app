@@ -119,7 +119,7 @@ class TechniqueCard extends StatelessWidget {
             if(folderId.isNotEmpty && plan.folderId != folderId && !plan.isShared)
             ...[
              const SizedBox(height: 2,),
-            Text('Technique not available',style: TextStyle(color: Colors.red,fontStyle: FontStyle.italic),)
+            Text('Since technique is out of the folder user will not see them.',style: TextStyle(color: Colors.red,fontStyle: FontStyle.italic),)
             ]
           ],
         ),
