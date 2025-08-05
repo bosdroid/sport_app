@@ -1030,6 +1030,8 @@ class PlanProvider with ChangeNotifier {
   //     notifyListeners();
   //   }
   // }
+
+  List<Plan> _lastFetchedPlans = [];
   Future<void> fetchPlans() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -1076,8 +1078,18 @@ class PlanProvider with ChangeNotifier {
               debugPrint("Skipping invalid entry: Key=${entry.key}, Value=$value");
             }
           }
+          // Sort by timestamp for consistent order
+          fetchedPlans.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-          _plans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          // ✅ iOS-specific duplicate check
+          if (Platform.isIOS && _arePlanListsEqual(fetchedPlans, _lastFetchedPlans)) {
+            debugPrint("🔁 [iOS] Duplicate plans detected. Skipping update.");
+            return;
+          }
+
+          _lastFetchedPlans = List.from(fetchedPlans); // Store latest plans
+          _plans = fetchedPlans;
+          // _plans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
           _allPlans
             ..clear()
             ..addAll(_plans);
@@ -1101,6 +1113,25 @@ class PlanProvider with ChangeNotifier {
       notifyListeners();
     });
   }
+
+  bool _arePlanListsEqual(List<Plan> a, List<Plan> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (!_arePlansEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  bool _arePlansEqual(Plan a, Plan b) {
+    return a.id == b.id &&
+        a.userId == b.userId &&
+        a.title == b.title &&
+        a.description == b.description &&
+        a.timestamp == b.timestamp &&
+        listEquals(a.from, b.from) &&
+        listEquals(a.to, b.to);
+  }
+
 
   Future<void> fetchFavouritesPlans() async {
     final user = _auth.currentUser;
