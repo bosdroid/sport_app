@@ -918,6 +918,73 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
+  Future<List<Plan>?> fetchPlansForGenerateMap(String fId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    final Set<String> loadedPlanIds = {}; // Tracks only connected (from/to) plan IDs
+    List<Plan>? allPlans = [];
+
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final prefs = await SharedPreferences.getInstance();
+    final String userId = prefs.getString("user_name") ?? '';
+
+    try {
+      // Step 1: Fetch main plans for the folder
+      final snapshot = await _plansRef.orderByChild('folderId').equalTo(fId).get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final rawData = snapshot.value;
+        debugPrint("Fetched Data: $rawData");
+
+        if (rawData is Map<Object?, Object?>) {
+          for (final entry in rawData.entries) {
+            final value = entry.value;
+            if (value is Map<Object?, Object?>) {
+              final data = value.map((k, v) => MapEntry(k.toString(), v));
+              final plan = Plan.fromMap(data);
+
+              allPlans.add(plan); // Always add the main plan
+              debugPrint("Main Plan: ${plan.id}");
+
+              // Step 2: Fetch parent plans using `plan.to`
+              for (String parentId in plan.to) {
+                if (loadedPlanIds.add(parentId)) {
+                  await fetchSinglePlanById(parentId, allPlans);
+                }
+              }
+
+              // Step 3: Fetch child plans using `plan.from`
+              for (String childId in plan.from) {
+                if (loadedPlanIds.add(childId)) {
+                  await fetchSinglePlanById(childId, allPlans);
+                }
+              }
+            }
+          }
+
+          allPlans
+            .sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        } else {
+          debugPrint("Fetched data is not a valid Map: $rawData");
+          allPlans = [];
+        }
+      } else {
+        debugPrint("No plans found for folder: $fId");
+        allPlans = [];
+      }
+    } catch (e, stackTrace) {
+      debugPrint("Error fetching plans: $e\n$stackTrace");
+      allPlans = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+    return allPlans;
+  }
+
   Future<bool> checkFolderPermission(String userId, String folderId) async {
     try {
       final snapshot = await _foldersRef.child(folderId).get();
@@ -972,65 +1039,6 @@ class PlanProvider with ChangeNotifier {
     }
   }
   StreamSubscription<DatabaseEvent>? _plansSubscription;
-  // Future<void> fetchPlans() async {
-  //   final user = _auth.currentUser;
-  //   if (user == null) return;
-  //
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final String userId = prefs.getString("user_name") ?? '';
-  //   _loggedUserId = userId;
-  //   _isLoading = true;
-  //   notifyListeners();
-  //
-  //   try {
-  //     final snapshot = await _plansRef.orderByChild('userId').equalTo(userId).get();
-  //
-  //     if (snapshot.exists && snapshot.value != null) {
-  //       final rawData = snapshot.value;
-  //       debugPrint("Fetched Data: $rawData");
-  //
-  //       if (rawData is Map<Object?, Object?>) {
-  //         final List<Plan> fetchedPlans = [];
-  //
-  //         for (final entry in rawData.entries) {
-  //           final value = entry.value;
-  //
-  //           if (value is Map<Object?, Object?>) {
-  //             final data = value.map((k, v) => MapEntry(k.toString(), v));
-  //
-  //             final plan = Plan.fromMap(data);
-  //             if (plan.userId == userId) {
-  //               fetchedPlans.add(plan);
-  //               debugPrint("Plan ID: ${plan.id}, From: ${plan.from}, To: ${plan.to}");
-  //             } else {
-  //               debugPrint("Skipped plan with mismatched userId: ${plan.userId}");
-  //             }
-  //           } else {
-  //             debugPrint("Skipping invalid entry: Key=${entry.key}, Value=$value");
-  //           }
-  //         }
-  //
-  //         _plans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-  //         _allPlans.addAll(_plans);
-  //         updateAllTags();
-  //       } else {
-  //         debugPrint("Fetched data is not a valid Map: $rawData");
-  //         _plans = [];
-  //       }
-  //     } else {
-  //       debugPrint("No plans found for user: $userId");
-  //       _plans = [];
-  //     }
-  //   } catch (e, stackTrace) {
-  //     debugPrint("Error fetching plans: $e\n$stackTrace");
-  //     AppAnalytics.logErrorStateShown('404');
-  //     _plans = [];
-  //   } finally {
-  //     _isLoading = false;
-  //     notifyListeners();
-  //   }
-  // }
-
   Future<void> fetchPlans() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -1038,24 +1046,15 @@ class PlanProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final String userId = prefs.getString("user_name") ?? '';
     _loggedUserId = userId;
-
     _isLoading = true;
     notifyListeners();
 
-    // Cancel any previous subscription to avoid multiple listeners
-    await _plansSubscription?.cancel();
-
-    // Listen to changes in the plans for this user
-    _plansSubscription = _plansRef
-        .orderByChild('userId')
-        .equalTo(userId)
-        .onValue
-        .listen((DatabaseEvent event) {
-      final snapshot = event.snapshot;
+    try {
+      final snapshot = await _plansRef.orderByChild('userId').equalTo(userId).get();
 
       if (snapshot.exists && snapshot.value != null) {
         final rawData = snapshot.value;
-        // debugPrint("Live Data: $rawData");
+        debugPrint("Fetched Data: $rawData");
 
         if (rawData is Map<Object?, Object?>) {
           final List<Plan> fetchedPlans = [];
@@ -1079,29 +1078,88 @@ class PlanProvider with ChangeNotifier {
           }
 
           _plans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-          _allPlans
-            ..clear()
-            ..addAll(_plans);
+          _allPlans.addAll(_plans);
           updateAllTags();
         } else {
+          debugPrint("Fetched data is not a valid Map: $rawData");
           _plans = [];
-          debugPrint("Invalid map format received.");
         }
       } else {
+        debugPrint("No plans found for user: $userId");
         _plans = [];
-        debugPrint("No plans found.");
       }
-
-      _isLoading = false;
-      notifyListeners();
-    }, onError: (e) {
-      debugPrint("Error in realtime listener: $e");
+    } catch (e, stackTrace) {
+      debugPrint("Error fetching plans: $e\n$stackTrace");
       AppAnalytics.logErrorStateShown('404');
       _plans = [];
+    } finally {
       _isLoading = false;
       notifyListeners();
-    });
+    }
   }
+
+  // Future<void> fetchPlans() async {
+  //   final user = _auth.currentUser;
+  //   if (user == null) return;
+  //
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final String userId = prefs.getString("user_name") ?? '';
+  //   _loggedUserId = userId;
+  //
+  //   _isLoading = true;
+  //   notifyListeners();
+  //
+  //   // Cancel any previous subscription to avoid multiple listeners
+  //   await _plansSubscription?.cancel();
+  //
+  //   // Listen to changes in the plans for this user
+  //   _plansSubscription = _plansRef
+  //       .orderByChild('userId')
+  //       .equalTo(userId)
+  //       .onValue
+  //       .listen((DatabaseEvent event) {
+  //     final snapshot = event.snapshot;
+  //
+  //     if (snapshot.exists && snapshot.value != null) {
+  //       final rawData = snapshot.value;
+  //
+  //       if (rawData is Map<Object?, Object?>) {
+  //         final List<Plan> fetchedPlans = [];
+  //
+  //         for (final entry in rawData.entries) {
+  //           final value = entry.value;
+  //
+  //           if (value is Map<Object?, Object?>) {
+  //             final data = value.map((k, v) => MapEntry(k.toString(), v));
+  //
+  //             final plan = Plan.fromMap(data);
+  //             if (plan.userId == userId) {
+  //               fetchedPlans.add(plan);
+  //             }
+  //           }
+  //         }
+  //
+  //         _plans = fetchedPlans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  //         _allPlans
+  //           ..clear()
+  //           ..addAll(_plans);
+  //         updateAllTags();
+  //       } else {
+  //         _plans = [];
+  //       }
+  //     } else {
+  //       _plans = [];
+  //     }
+  //
+  //     _isLoading = false;
+  //     notifyListeners();
+  //   }, onError: (e) {
+  //     AppAnalytics.logErrorStateShown('404');
+  //     _plans = [];
+  //     _isLoading = false;
+  //     notifyListeners();
+  //   });
+  // }
 
   Future<void> fetchFavouritesPlans() async {
     final user = _auth.currentUser;
@@ -1391,6 +1449,7 @@ class PlanProvider with ChangeNotifier {
   @override
   void dispose() {
     _debounce?.cancel();
+    _plansSubscription?.cancel();
     resetVideoEntries();
     super.dispose();
   }
@@ -1438,7 +1497,7 @@ class PlanProvider with ChangeNotifier {
       await updateConnections(userId, parentId, planId);
     }
 
-    // _plans.add(newPlan);
+    _plans.add(newPlan);
     // _filteredPlans.add(newPlan);
     AppAnalytics.logCardCreated(planId);
     _plans = _plans..sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -1494,25 +1553,24 @@ class PlanProvider with ChangeNotifier {
         'folderId': updatedPlan.folderId,
         'images': uploadedImageUrls,
       });
-
-      // final index = _plans.indexWhere((plan) => plan.id == updatedPlan.id);
-      // if (index != -1) {
-      //   _plans[index] = Plan(
-      //     id: updatedPlan.id,
-      //     userId: updatedPlan.userId,
-      //     title: updatedPlan.title,
-      //     description: updatedPlan.description,
-      //     videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
-      //     tags: updatedPlan.tags,
-      //     folderId: updatedPlan.folderId,
-      //     images: uploadedImageUrls,
-      //     timestamp: updatedPlan.timestamp,
-      //     from: List.from(_plans[index].from),
-      //     to: List.from(_plans[index].to),
-      //   );
-      //   _allPlans = [];
-      //   _allPlans.addAll(_plans);
-      // }
+      final index = _plans.indexWhere((plan) => plan.id == updatedPlan.id);
+      if (index != -1) {
+        _plans[index] = Plan(
+          id: updatedPlan.id,
+          userId: updatedPlan.userId,
+          title: updatedPlan.title,
+          description: updatedPlan.description,
+          videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
+          tags: updatedPlan.tags,
+          folderId: updatedPlan.folderId,
+          images: uploadedImageUrls,
+          timestamp: updatedPlan.timestamp,
+          from: List.from(_plans[index].from),
+          to: List.from(_plans[index].to),
+        );
+        _allPlans = [];
+        _allPlans.addAll(_plans);
+      }
       AppAnalytics.logCardEdited(updatedPlan.id);
       resetVideoEntries();
       updateAllTags();
@@ -1569,24 +1627,24 @@ class PlanProvider with ChangeNotifier {
       });
 
       final index = _plans.indexWhere((plan) => plan.id == updatedPlan.id);
-      // if (index != -1) {
-      //   _plans[index] = Plan(
-      //     id: updatedPlan.id,
-      //     userId: updatedPlan.userId,
-      //     title: updatedPlan.title,
-      //     description: updatedPlan.description,
-      //     videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
-      //     tags: updatedPlan.tags,
-      //     folderId: updatedPlan.folderId,
-      //     images: uploadedImageUrls,
-      //     timestamp: updatedPlan.timestamp,
-      //     from: List.from(_plans[index].from),
-      //     to: List.from(_plans[index].to),
-      //   );
-      //   // _filteredPlans[index] = _plans[index];
-      //   _allPlans = [];
-      //   _allPlans.addAll(_plans);
-      // }
+      if (index != -1) {
+        _plans[index] = Plan(
+          id: updatedPlan.id,
+          userId: updatedPlan.userId,
+          title: updatedPlan.title,
+          description: updatedPlan.description,
+          videos: updatedPlan.videos!.map((v) => v.copyWith()).toList(),
+          tags: updatedPlan.tags,
+          folderId: updatedPlan.folderId,
+          images: uploadedImageUrls,
+          timestamp: updatedPlan.timestamp,
+          from: List.from(_plans[index].from),
+          to: List.from(_plans[index].to),
+        );
+        // _filteredPlans[index] = _plans[index];
+        _allPlans = [];
+        _allPlans.addAll(_plans);
+      }
       AppAnalytics.logCardEdited(updatedPlan.id);
       resetVideoEntries();
       updateAllTags();
@@ -1614,13 +1672,13 @@ class PlanProvider with ChangeNotifier {
     try {
       await _plansRef.child(planId).update({'note': note});
 
-      // final index = _plans.indexWhere((plan) => plan.id == planId);
-      // if (index != -1) {
-      //   _plans[index].note = note;
-      //   // _filteredPlans[index].note = note;
-      //   _allPlans = [];
-      //   _allPlans.addAll(_plans);
-      // }
+      final index = _plans.indexWhere((plan) => plan.id == planId);
+      if (index != -1) {
+        _plans[index].note = note;
+        // _filteredPlans[index].note = note;
+        _allPlans = [];
+        _allPlans.addAll(_plans);
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -1687,16 +1745,16 @@ class PlanProvider with ChangeNotifier {
       });
 
       // Update local cache
-      // final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
-      // if (parentIndex != -1) {
-      //   _plans[parentIndex].to.add(childId);
-      //   // _filteredPlans[parentIndex].to.add(childId);
-      // }
-      // final childIndex = _plans.indexWhere((plan) => plan.id == childId);
-      // if (childIndex != -1) {
-      //   _plans[childIndex].from.add(parentId);
-      //   // _filteredPlans[childIndex].from.add(parentId);
-      // }
+      final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
+      if (parentIndex != -1) {
+        _plans[parentIndex].to.add(childId);
+        // _filteredPlans[parentIndex].to.add(childId);
+      }
+      final childIndex = _plans.indexWhere((plan) => plan.id == childId);
+      if (childIndex != -1) {
+        _plans[childIndex].from.add(parentId);
+        // _filteredPlans[childIndex].from.add(parentId);
+      }
       _allPlans = [];
       _allPlans.addAll(_plans);
       notifyListeners();
@@ -1720,11 +1778,11 @@ class PlanProvider with ChangeNotifier {
         });
 
         // Update local cache
-        // final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
-        // if (parentIndex != -1) {
-        //   _plans[parentIndex].to.add(childId);
-        //   // _filteredPlans[parentIndex].to.add(childId);
-        // }
+        final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
+        if (parentIndex != -1) {
+          _plans[parentIndex].to.add(childId);
+          // _filteredPlans[parentIndex].to.add(childId);
+        }
       }
 
       // Update local cache for the child only once
