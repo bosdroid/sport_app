@@ -1,4 +1,5 @@
 import 'package:bjj_dairy/view/folder_plans_screen.dart';
+import 'package:bjj_dairy/view/pdf_export_screen.dart';
 import 'package:bjj_dairy/view/plan_detail_screen.dart';
 import 'package:bjj_dairy/widgets/plan_tile.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -489,6 +490,30 @@ class _PlansScreenState extends State<PlansScreen> {
 
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.account_tree_outlined),
+                title: const Text('Export Map'),
+                onTap: () async {
+
+                  List<Plan>? listPlans = await planProvider.fetchPlansForGenerateMap(collection.id!);
+                  if (!context.mounted) return;
+                  if(listPlans != null && listPlans.isNotEmpty){
+                    Navigator.pop(context); // Dismiss bottom sheet
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PdfExportScreen(
+                          plans: listPlans,
+                          collectionName: collection.name!,
+                        ),
+                      ),
+                    );
+                  }
+                  else{
+                    Navigator.pop(context); // Dismiss bottom sheet
+                  }
+                },
+              ),
             ],
           ),
         );
@@ -703,33 +728,33 @@ class _PlansScreenState extends State<PlansScreen> {
                               // 🔑 Required key for reordering
                               margin: const EdgeInsets.symmetric(horizontal: 8),
                               child: FutureBuilder<int>(
-                              future: planProvider.getPlanCountForSearchFolder(collection),
-                              builder: (context, snapshot) {
-                                final count = snapshot.data ?? 0;
-                                return CollectionCard(
-                                  folder: collection,
-                                  count: count,
-                                  userId: planProvider.loggedUserId,
-                                  onTap: () {
-                                    planProvider.filterPlans("", null);
-                                    planProvider.applyTagFilter([], null);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            FolderPlansScreen(
-                                              folderId: collection.id!,
-                                              isShared:
-                                              false,),
-                                      ),
+                                  future: planProvider.getPlanCountForSearchFolder(collection),
+                                  builder: (context, snapshot) {
+                                    final count = snapshot.data ?? 0;
+                                    return CollectionCard(
+                                      folder: collection,
+                                      count: count,
+                                      userId: planProvider.loggedUserId,
+                                      onTap: () {
+                                        planProvider.filterPlans("", null);
+                                        planProvider.applyTagFilter([], null);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                FolderPlansScreen(
+                                                  folderId: collection.id!,
+                                                  isShared:
+                                                  false,),
+                                          ),
+                                        );
+                                      },
+                                      onMore: () {
+                                        showCollectionOptions(
+                                            context, collection, planProvider);
+                                      },
                                     );
-                                  },
-                                  onMore: () {
-                                    showCollectionOptions(
-                                        context, collection, planProvider);
-                                  },
-                                );
-                              }
+                                  }
                               ),
                             );
                           } else {
