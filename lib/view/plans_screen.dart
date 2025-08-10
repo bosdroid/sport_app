@@ -490,30 +490,7 @@ class _PlansScreenState extends State<PlansScreen> {
 
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.account_tree_outlined),
-                title: const Text('Export Map'),
-                onTap: () async {
-
-                  List<Plan>? listPlans = await planProvider.fetchPlansForGenerateMap(collection.id!);
-                  if (!context.mounted) return;
-                  if(listPlans != null && listPlans.isNotEmpty){
-                    Navigator.pop(context); // Dismiss bottom sheet
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PdfExportScreen(
-                          plans: listPlans,
-                          collectionName: collection.name!,
-                        ),
-                      ),
-                    );
-                  }
-                  else{
-                    Navigator.pop(context); // Dismiss bottom sheet
-                  }
-                },
-              ),
+             
             ],
           ),
         );

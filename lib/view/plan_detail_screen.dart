@@ -1692,7 +1692,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 // Comment Input
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      const EdgeInsets.only(left: 16,right: 16, top: 6,bottom: 32),
                   child: Row(
                     children: [
                       Expanded(
