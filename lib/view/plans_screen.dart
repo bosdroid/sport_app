@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:bjj_dairy/route_observer.dart';
 import 'package:bjj_dairy/view/folder_plans_screen.dart';
 import 'package:bjj_dairy/view/pdf_export_screen.dart';
 import 'package:bjj_dairy/view/plan_detail_screen.dart';
@@ -6,9 +9,11 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
 import 'package:multi_select_flutter/util/multi_select_item.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../model/folder.dart';
@@ -38,14 +43,16 @@ class PlansScreen extends StatefulWidget {
   State<PlansScreen> createState() => _PlansScreenState();
 }
 
-class _PlansScreenState extends State<PlansScreen> {
+class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   List<String> _selectedTags = [];
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final DatabaseReference _usersDetailsRef = FirebaseDatabase.instance.ref().child('USERS_DETAILS/');
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Provider.of<PlanProvider>(context, listen: false).fetchFolders();
       await Provider.of<PlanProvider>(context, listen: false).fetchPlans();
@@ -58,6 +65,41 @@ class _PlansScreenState extends State<PlansScreen> {
             .update({'fcmToken': token});
       });
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      // App resumed from background
+      await Provider.of<PlanProvider>(context, listen: false).fetchFolders();
+      await Provider.of<PlanProvider>(context, listen: false).fetchPlans();
+      await Provider.of<PlanProvider>(context, listen: false).fetchFavouritesPlans();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  Future<void> didPopNext() async {
+    // Called when coming back to this screen
+     await Provider.of<PlanProvider>(context, listen: false).fetchFolders();
+     await Provider.of<PlanProvider>(context, listen: false).fetchPlans();
+     await Provider.of<PlanProvider>(context, listen: false).fetchFavouritesPlans();
+
   }
 
   String getVideoThumbnailUrl(String videoUrl) {
@@ -521,6 +563,21 @@ class _PlansScreenState extends State<PlansScreen> {
     );
   }
 
+  Future<void> shareApp() async {
+    String appLink;
+
+    if (Platform.isAndroid) {
+      appLink = 'https://play.google.com/store/apps/details?id=com.bjjdairy.app';
+    } else {
+      appLink = 'https://apps.apple.com/app/idYOUR_APP_ID';
+    }
+
+    await Share.share(
+      'Check out this amazing app: $appLink',
+      subject: 'Try this app!',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
@@ -552,13 +609,32 @@ class _PlansScreenState extends State<PlansScreen> {
                     context, RoutesNames.searchFolderScreen);
                 break;
               case 'rate':
-                print('Navigate to Rate Us');
+              // Open app store rating page
+                final InAppReview inAppReview = InAppReview.instance;
+                if (await inAppReview.isAvailable()) {
+                  await inAppReview.requestReview();
+                } else {
+                  // Fallback to store link if native review not available
+                  final Uri storeUri = Uri.parse(
+                      'https://play.google.com/store/apps/details?id=com.bjjdairy.app');
+                  if (await canLaunchUrl(storeUri)) {
+                    await launchUrl(storeUri, mode: LaunchMode.externalApplication);
+                  }
+                }
                 break;
               case 'recommend':
-                print('Share with friends');
+                await shareApp();
                 break;
               case 'support':
-                print('Open Contact Support');
+              // Open contact support email
+                final Uri emailUri = Uri(
+                  scheme: 'mailto',
+                  path: 'support@yourdomain.com',
+                  query: 'subject=App Support&body=Hello, I need help with...',
+                );
+                if (await canLaunchUrl(emailUri)) {
+                  await launchUrl(emailUri);
+                }
                 break;
               case 'logout':
                 await planProvider.resetLoggedId();
@@ -568,7 +644,13 @@ class _PlansScreenState extends State<PlansScreen> {
                     context, RoutesNames.loginScreen);
                 break;
               case 'privacy':
-                print('Show Privacy Policy');
+                final Uri privacyUrl = Uri.parse('https://bosdroid.github.io/sport_app/privacy-policy.html');
+
+                if (await canLaunchUrl(privacyUrl)) {
+                  await launchUrl(privacyUrl, mode: LaunchMode.externalApplication);
+                } else {
+                  throw 'Could not launch $privacyUrl';
+                }
                 break;
             }
           },

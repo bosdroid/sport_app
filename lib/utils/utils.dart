@@ -55,6 +55,10 @@ class Util {
     return n.toString().padLeft(2, '0');
   }
 
+  static String colorToHex(Color color) {
+    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+  }
+
   static Future<void> launchUrl(String url) async {
     print(url);
     if (await canLaunch(url)) {

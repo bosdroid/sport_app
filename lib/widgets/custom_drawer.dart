@@ -47,21 +47,21 @@ class CustomDrawer extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Contact Items with callback
-          ListTile(
-            leading: const Icon(Icons.star_border),
-            title: const Text('Rate us'),
-            onTap: () => onItemTap('rate'),
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.star_border),
+          //   title: const Text('Rate us'),
+          //   onTap: () => onItemTap('rate'),
+          // ),
           ListTile(
             leading: const Icon(Icons.share),
             title: const Text('Recommend to friends'),
             onTap: () => onItemTap('recommend'),
           ),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: const Text('Contact Support'),
-            onTap: () => onItemTap('support'),
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.help_outline),
+          //   title: const Text('Contact Support'),
+          //   onTap: () => onItemTap('support'),
+          // ),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),

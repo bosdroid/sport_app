@@ -99,23 +99,23 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                 onTap: () async {
                   Navigator.pop(context); // Dismiss bottom sheet
                   if (!isInternetAvailable) {
-                    Util.showMessageDialog(context, 'Internet required to access this folder!');
+                    Util.showMessageDialog(parentContext, 'Internet required to access this folder!');
                     return;
                   }
                   if (collection.access == 'private') {
-                    Util.showMessageDialog(context, 'You do not have access to this folder!');
+                    Util.showMessageDialog(parentContext, 'You do not have access to this folder!');
                     return;
                   } else if (collection.access == 'specific' &&
                       !collection.allowedUsers.contains(planProvider.loggedUserId)) {
-                    Util.showMessageDialog(context, 'You do not have access to this folder!');
+                    Util.showMessageDialog(parentContext, 'You do not have access to this folder!');
                     return;
                   }
 
                   if (await planProvider.checkFolderPermission(planProvider.loggedUserId, collection.id!)) {
                     await planProvider.copySharedFolderWithTechniques(collection);
-                    await Util.showMessageDialog(context, 'All folder techniques has been copied!');
+                    await Util.showMessageDialog(parentContext, 'All folder techniques has been copied!');
                   } else {
-                    Util.showMessageDialog(context, "You do not have access to this folder!");
+                    Util.showMessageDialog(parentContext, "You do not have access to this folder!");
                   }
 
                 },

@@ -338,7 +338,8 @@ class PlanProvider with ChangeNotifier {
 
     final Map<dynamic, dynamic> data =
     Map<dynamic, dynamic>.from(snapshot.value as Map);
-
+    _folders.clear();
+    notifyListeners();
     // ── 1.  Add a shareId where it’s missing ────────────────────────
     final List<Future<void>> pendingUpdates = [];
     bool hasFavourites = false;
@@ -572,20 +573,20 @@ class PlanProvider with ChangeNotifier {
   //   notifyListeners();
   // }
 
-  Future<void> deleteFolder(Folder folder) async {
+  Future<void> deleteFolder(Folder f) async {
     final prefs = await SharedPreferences.getInstance();
     final String userId = prefs.getString("user_name") as String;
 
     // Remove the folder from Firebase
-    await _foldersRef.child('${folder.id}').remove();
-    await _shareIdsRef.child('${folder.shareId}').remove();
+    await _foldersRef.child('${f.id}').remove();
+    await _shareIdsRef.child('${f.shareId}').remove();
 
     // Remove from local folder list
-    _folders.removeWhere((folder) => folder.id == '${folder.id}');
+    _folders.removeWhere((folder) => folder.id == f.id);
 
     // Update plans that were assigned to this folder
     for (var plan in _plans) {
-      if (plan.folderId == '${folder.id}') {
+      if (plan.folderId == '${f.id}') {
         plan.folderId = ""; // or set to "" or "unassigned" as needed
         await _plansRef.child('$userId/${plan.id}').update({
           'folderId': '',
@@ -1047,6 +1048,9 @@ class PlanProvider with ChangeNotifier {
     final String userId = prefs.getString("user_name") ?? '';
     _loggedUserId = userId;
     _isLoading = true;
+    _allPlans.clear();
+    _plans.clear();
+    _filteredPlans.clear();
     notifyListeners();
 
     try {
@@ -1168,11 +1172,11 @@ class PlanProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final String userId = prefs.getString("user_name") ?? '';
     _isLoading = true;
+    _favouritesPlans.clear();
     notifyListeners();
 
     try {
       final snapshot = await _favouritesRef.orderByChild('userId').equalTo(userId).get();
-
       if (snapshot.exists && snapshot.value != null) {
         final rawData = snapshot.value;
         debugPrint("Fetched FAVOURITES: $rawData");

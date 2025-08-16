@@ -7,6 +7,7 @@ import 'package:bjj_dairy/providers/note_provider.dart';
 import 'package:bjj_dairy/providers/plan_provider.dart';
 import 'package:bjj_dairy/providers/profile_provider.dart';
 import 'package:bjj_dairy/providers/validation_provider.dart';
+import 'package:bjj_dairy/route_observer.dart';
 import 'package:bjj_dairy/services/notification_service.dart';
 import 'package:bjj_dairy/utils/routes/routes.dart';
 import 'package:bjj_dairy/utils/routes/routes_names.dart';
@@ -59,6 +60,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider())
       ],
       child: MaterialApp(
+        navigatorObservers: [routeObserver],
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Color(0xFF2B303A),        // 👈 Primary
