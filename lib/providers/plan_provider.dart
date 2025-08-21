@@ -453,7 +453,9 @@ class PlanProvider with ChangeNotifier {
     if (existingFolder != null) {
       // Use existing folder
       targetFolderId = existingFolder.id;
-    } else {
+    }
+    else
+    {
       // Create a new folder with the same name
       final String newFolderId = _foldersRef.push().key!;
 
@@ -503,18 +505,18 @@ class PlanProvider with ChangeNotifier {
               debugPrint("Main Plan: ${plan.id}");
 
               // Step 2: Fetch parent plans using `plan.to`
-              for (String parentId in plan.to) {
-                if (loadedPlanIds.add(parentId)) {
-                  await fetchSinglePlanById(parentId, allPlans);
-                }
-              }
+              // for (String parentId in plan.to) {
+              //   if (loadedPlanIds.add(parentId)) {
+              //     await fetchSinglePlanById(parentId, allPlans);
+              //   }
+              // }
 
               // Step 3: Fetch child plans using `plan.from`
-              for (String childId in plan.from) {
-                if (loadedPlanIds.add(childId)) {
-                  await fetchSinglePlanById(childId, allPlans);
-                }
-              }
+              // for (String childId in plan.from) {
+              //   if (loadedPlanIds.add(childId)) {
+              //     await fetchSinglePlanById(childId, allPlans);
+              //   }
+              // }
             }
           }
         }
@@ -1820,40 +1822,36 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> removeLink(
-      {required String parentId, required String childId}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final String userId = prefs.getString("user_name") ?? '';
+  Future<void> removeLink({
+    required String parentId,
+    required String childId,
+  }) async {
+    try {
+      // Remove childId from parent's "to" list
+      await _plansRef.child('$parentId/to/$childId').remove();
 
-    final DatabaseReference parentRef = _plansRef.child("$parentId/to");
-    final DatabaseReference childRef = _plansRef.child("$childId/from");
+      // Remove parentId from child's "from" list
+      await _plansRef.child('$childId/from/$parentId').remove();
 
-    // Find and remove childId from parent's "To" list
-    final parentSnapshot = await parentRef.once();
-    if (parentSnapshot.snapshot.value != null) {
-      Map<dynamic, dynamic> parentData = parentSnapshot.snapshot.value as Map;
-      for (var key in parentData.keys) {
-        if (parentData[key] == childId) {
-          await parentRef.child(key).remove();
-          break;
-        }
+      // Update local cache
+      final parentIndex = _plans.indexWhere((plan) => plan.id == parentId);
+      if (parentIndex != -1) {
+        _plans[parentIndex].to.remove(childId);
       }
-    }
 
-    // Find and remove parentId from child's "From" list
-    final childSnapshot = await childRef.once();
-    if (childSnapshot.snapshot.value != null) {
-      Map<dynamic, dynamic> childData = childSnapshot.snapshot.value as Map;
-      for (var key in childData.keys) {
-        if (childData[key] == parentId) {
-          await childRef.child(key).remove();
-          break;
-        }
+      final childIndex = _plans.indexWhere((plan) => plan.id == childId);
+      if (childIndex != -1) {
+        _plans[childIndex].from.remove(parentId);
       }
-    }
 
-    notifyListeners();
+      _allPlans = [];
+      _allPlans.addAll(_plans);
+      notifyListeners();
+    } catch (e) {
+      print('Error removing link: $e');
+    }
   }
+
 
   List<Plan> getParentPlans(String planId,bool isShared) {
     if(isShared){

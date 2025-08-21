@@ -240,7 +240,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   }
 
   Widget _buildLinksItemCard(
-      Plan plan, BuildContext context, PlanProvider planProvider) {
+      Plan plan, BuildContext context, PlanProvider planProvider,String parentId,bool isParent) {
     return GestureDetector(
       onTap: (widget.isShared || widget.plan.isShared) &&
               widget.plan.folderId.isNotEmpty &&
@@ -314,15 +314,33 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 ),
               ),
               // const Icon(Icons.chevron_right, color: Colors.grey),
-              GestureDetector(
-                  onTap: (widget.isShared || widget.plan.isShared) &&
-                          widget.plan.folderId.isNotEmpty &&
-                          widget.plan.folderId != plan.folderId
-                      ? null
-                      : () => showUpdateNoteBottomSheet(
-                          context, plan.id, plan.note, planProvider),
-                  child: widget.isShared ? const SizedBox.shrink(): Icon(Icons.edit,
-                      color: Theme.of(context).primaryColor, size: 20)),
+              Row(
+                children: [
+                  GestureDetector(
+                      onTap: (widget.isShared || widget.plan.isShared) &&
+                              widget.plan.folderId.isNotEmpty &&
+                              widget.plan.folderId != plan.folderId
+                          ? null
+                          : () => showUpdateNoteBottomSheet(
+                              context, plan.id, plan.note, planProvider),
+                      child: widget.isShared ? const SizedBox.shrink(): Icon(Icons.edit,
+                          color: Theme.of(context).primaryColor, size: 20)),
+                  const SizedBox(width: 12,),
+                  GestureDetector(
+                      onTap: (){
+                        print('remove link called');
+                        if(isParent){
+                          planProvider.removeLink(parentId: plan.id, childId: parentId);
+                        }
+                        else{
+                          planProvider.removeLink(parentId: parentId, childId: plan.id);
+                        }
+
+                      },
+                      child: widget.isShared ? const SizedBox.shrink(): Icon(Icons.remove_circle_outline,
+                          color: Colors.red, size: 20)),
+                ],
+              ),
             ],
           ),
         ),
@@ -2419,7 +2437,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                       return _buildLinksItemCard(
                                           parentPlans[index],
                                           context,
-                                          planProvider);
+                                          planProvider,widget.plan.id,true);
                                     },
                                   ),
                           ),
@@ -2498,6 +2516,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                         childPlans[index],
                                         context,
                                         planProvider,
+                                        widget.plan.id,
+                                        false
                                       );
                                     },
                                   ),

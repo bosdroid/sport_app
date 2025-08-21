@@ -72,56 +72,56 @@ class _ChangeAccessBottomSheetState extends State<ChangeAccessBottomSheet> {
               setState(() => selectedAccess = value!);
             },
           ),
-          RadioListTile(
-            title: const Text('Specific Users'),
-            value: 'specific',
-            groupValue: selectedAccess,
-            onChanged: (value) {
-              setState(() => selectedAccess = value!);
-            },
-          ),
-          if (selectedAccess == 'specific') ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey.shade300,
-                border: Border.all(color: Colors.grey.shade100),
-              ),
-              child: TextField(
-                controller: _userIdController,
-                decoration: InputDecoration(
-                  labelText: 'Add user ID',
-                  border: InputBorder.none,
-                ),
-                onSubmitted: (userId) {
-                  if (userId.isNotEmpty && !allowedUsers.contains(userId)) {
-                    setState(() {
-                      allowedUsers.add(userId);
-                      _userIdController.clear();
-                    });
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Wrap(
-                spacing: 8,
-                children: allowedUsers.map((user) {
-                  return Chip(
-                    label: Text(user),
-                    onDeleted: () {
-                      setState(() => allowedUsers.remove(user));
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
+          // RadioListTile(
+          //   title: const Text('Specific Users'),
+          //   value: 'specific',
+          //   groupValue: selectedAccess,
+          //   onChanged: (value) {
+          //     setState(() => selectedAccess = value!);
+          //   },
+          // ),
+          // if (selectedAccess == 'specific') ...[
+          //   const SizedBox(height: 8),
+          //   Container(
+          //     padding: const EdgeInsets.symmetric(horizontal: 12),
+          //     decoration: BoxDecoration(
+          //       borderRadius: BorderRadius.circular(8),
+          //       color: Colors.grey.shade300,
+          //       border: Border.all(color: Colors.grey.shade100),
+          //     ),
+          //     child: TextField(
+          //       controller: _userIdController,
+          //       decoration: InputDecoration(
+          //         labelText: 'Add user ID',
+          //         border: InputBorder.none,
+          //       ),
+          //       onSubmitted: (userId) {
+          //         if (userId.isNotEmpty && !allowedUsers.contains(userId)) {
+          //           setState(() {
+          //             allowedUsers.add(userId);
+          //             _userIdController.clear();
+          //           });
+          //         }
+          //       },
+          //     ),
+          //   ),
+          //   const SizedBox(height: 8),
+          //   SingleChildScrollView(
+          //     scrollDirection: Axis.horizontal,
+          //     child: Wrap(
+          //       spacing: 8,
+          //       children: allowedUsers.map((user) {
+          //         return Chip(
+          //           label: Text(user),
+          //           onDeleted: () {
+          //             setState(() => allowedUsers.remove(user));
+          //           },
+          //         );
+          //       }).toList(),
+          //     ),
+          //   ),
+          // ],
+          // const SizedBox(height: 16),
           Divider(height: 1,color: Colors.grey.shade300,),
           Row(
             children: [
