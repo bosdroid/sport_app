@@ -5,6 +5,7 @@ import 'package:bjj_dairy/view/folder_plans_screen.dart';
 import 'package:bjj_dairy/view/pdf_export_screen.dart';
 import 'package:bjj_dairy/view/plan_detail_screen.dart';
 import 'package:bjj_dairy/widgets/plan_tile.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -1094,6 +1095,7 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
               foregroundColor: Colors.white,
               mini: true,
               onPressed: () async {
+                //FirebaseCrashlytics.instance.crash();
                 await Navigator.pushNamed(
                   context,
                   RoutesNames.addPlanScreen,
