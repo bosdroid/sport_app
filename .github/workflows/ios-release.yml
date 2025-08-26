@@ -3,6 +3,7 @@ name: iOS Release (TestFlight)
 on:
   push:
     branches:
+      - 'release-*'
       - 'release/**'
   workflow_dispatch:
 
