@@ -3,8 +3,8 @@ name: iOS Release (TestFlight)
 on:
   push:
     branches:
-      - 'release-*'
-      - 'release/**'
+      - 'release-*'   # для веток вида release-1.0
+      - 'release/**'  # и для release/1.0.0
   workflow_dispatch:
 
 jobs:
@@ -48,4 +48,3 @@ jobs:
         run: |
           cd ios
           fastlane ci_release
-      
