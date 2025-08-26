@@ -23,10 +23,8 @@ jobs:
           channel: stable
           architecture: arm64
 
-      - name: Install CocoaPods
-        run: |
-          sudo gem install cocoapods
-          cd ios && pod install --repo-update
+      - name: Install CocoaPods (tool only)
+        run: sudo gem install cocoapods
 
       - name: Install fastlane
         run: |
