@@ -25,14 +25,11 @@ jobs:
       - name: Flutter pub get (generate ios/Flutter/Generated.xcconfig)
         run: flutter pub get
 
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods
-
-      - name: Pod install (after pub get)
+      - name: CocoaPods update (refresh Podfile.lock to latest Firebase)
         run: |
           cd ios
           pod repo update
-          pod install
+          pod update
 
       - name: Install fastlane
         run: |
@@ -51,3 +48,4 @@ jobs:
         run: |
           cd ios
           fastlane ci_release
+      
