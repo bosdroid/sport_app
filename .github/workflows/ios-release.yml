@@ -10,7 +10,6 @@ on:
 jobs:
   build-upload:
     runs-on: macos-14
-
     steps:
       - uses: actions/checkout@v4
 
@@ -23,8 +22,17 @@ jobs:
           channel: stable
           architecture: arm64
 
-      - name: Install CocoaPods (tool only)
+      - name: Flutter pub get (generate ios/Flutter/Generated.xcconfig)
+        run: flutter pub get
+
+      - name: Install CocoaPods
         run: sudo gem install cocoapods
+
+      - name: Pod install (after pub get)
+        run: |
+          cd ios
+          pod repo update
+          pod install
 
       - name: Install fastlane
         run: |
