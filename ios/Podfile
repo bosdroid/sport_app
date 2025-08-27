@@ -47,6 +47,12 @@ end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
+    # настройки Flutter для каждой pod-цели (как у тебя было)
     flutter_additional_ios_build_settings(target)
+
+    # выравниваем минимальный iOS-таргет для ВСЕХ pods (важно для Firebase 12.x)
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+    end
   end
 end
