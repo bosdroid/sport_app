@@ -29,13 +29,20 @@ jobs:
           flutter pub get
           echo "✅ DONE: flutter pub get"
 
-      - name: CocoaPods update (pin FirebaseSharedSwift)
+      - name: CocoaPods update (pin FirebaseSharedSwift + bump Firebase/Database)
         run: |
           set -euo pipefail
           cd ios
+          echo "::group::pod repo update"
           pod repo update --no-ansi
-          pod update FirebaseSharedSwift --no-ansi
+          echo "::endgroup::"
+          # точечно обновляем проблемные pods
+          echo "::group::pod update FirebaseSharedSwift + Firebase/Database"
+          pod update FirebaseSharedSwift Firebase/Database --no-ansi
+          echo "::endgroup::"
+          # синхронизируем установку
           pod install --no-ansi
+          echo "✅ DONE: CocoaPods update"
 
       - name: Install fastlane
         run: |
@@ -44,7 +51,6 @@ jobs:
           gem install fastlane
           echo "✅ DONE: fastlane installed"
 
-      # отдельный шаг, чтобы сразу видеть ошибку именно сборки Flutter/Xcode
       - name: Flutter build iOS (no codesign)
         run: |
           set -euo pipefail
