@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../model/folder.dart';
 import '../model/plan.dart';
 import '../providers/plan_provider.dart';
+import '../utils/app_strings.dart';
 import '../utils/routes/routes_names.dart';
 import '../utils/utils.dart';
 import '../widgets/tag_selector.dart';
@@ -69,7 +70,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
     Function(String folderId) onFolderSelected,
   ) {
     final List<Folder> foldersWithDefault = [
-      Folder(id: '', name: 'Default'), // Add default at the top
+      Folder(id: '', name: AppStrings.defaultCollection), // Add default at the top
       ...folders.where((folder) => folder.id != widget.folderId),
     ];
 
@@ -96,7 +97,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                 ),
               ),
               const Text(
-                'Select Collection',
+                AppStrings.selectCollection,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 16),
@@ -129,7 +130,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text(
-                  'Cancel',
+                  AppStrings.cancel,
                   style:
                       TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
                 ),
@@ -159,7 +160,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch the URL')),
+          const SnackBar(content: Text(AppStrings.couldNotLaunch)),
         );
       }
     }
@@ -186,7 +187,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                 children: [
                   const SizedBox(width: 24), // Placeholder to center title
                   const Text(
-                    'Options',
+                    AppStrings.optionsTitle,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -201,7 +202,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
               if (plan.videos != null && plan.videos!.isNotEmpty)
                 ListTile(
                   leading: const Icon(Icons.play_circle_fill),
-                  title: const Text('Play Video'),
+                  title: const Text(AppStrings.playVideo),
                   onTap: () {
                     Navigator.pop(context);
                     _openVideoInWebView(plan, context);
@@ -209,7 +210,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                 ),
               ListTile(
                 leading: const Icon(Icons.info_outline),
-                title: const Text('More Details'),
+                title: const Text(AppStrings.moreDetails),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -224,11 +225,11 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.drive_file_move_outline),
-                title: const Text('Move to Collection'),
+                title: const Text(AppStrings.moveToCollection),
                 onTap: () {
                   Navigator.pop(context);
                   if (widget.isShared) {
-                    Util.showMessageDialog(context, 'No permission to move');
+                    Util.showMessageDialog(context, AppStrings.moveDisableHint);
                     return;
                   }
                   showFolderSelectionBottomSheet(
@@ -245,11 +246,11 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                 leading: const Icon(
                   Icons.edit,
                 ),
-                title: const Text('Edit'),
+                title: const Text(AppStrings.edit),
                 onTap: () async {
                   Navigator.pop(context);
                   if (widget.isShared) {
-                    Util.showMessageDialog(context, 'No permission to edit');
+                    Util.showMessageDialog(context, AppStrings.editDisableHint);
                     return;
                   }
                   final updatedPlan = await Navigator.push(
@@ -268,17 +269,17 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                   Icons.delete,
                   color: Colors.red,
                 ),
-                title: const Text('Delete'),
+                title: const Text(AppStrings.delete),
                 onTap: () {
                   Navigator.pop(context);
                   if (widget.isShared) {
-                    Util.showMessageDialog(context, 'No permission to edit');
+                    Util.showMessageDialog(context, AppStrings.editDisableHint);
                     return;
                   }
                   Util.showConfirmationDialog(
                     context: context,
-                    title: 'Delete Technique',
-                    content: 'Are you sure you want to delete?',
+                    title: AppStrings.deleteTechniqueTitle,
+                    content: AppStrings.deleteTechniqueConfirm,
                     onConfirmed: () {
                       planProvider.deletePlan(plan.id);
                     },
@@ -308,28 +309,9 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
         return true;
       },
       child: Scaffold(
-        // appBar: AppBar(title: Text('Collection Plans')),
-        // backgroundColor: Colors.grey.shade100,
         body: SafeArea(
           child: Column(
             children: [
-              // Padding(
-              //   padding: const EdgeInsets.all(8.0),
-              //   child: TextField(
-              //     controller: _searchController,
-              //     decoration: InputDecoration(
-              //       hintText: 'Searching...',
-              //       prefixIcon: Icon(Icons.search),
-              //       border: OutlineInputBorder(
-              //         borderRadius: BorderRadius.circular(12),
-              //       ),
-              //       contentPadding: EdgeInsets.symmetric(horizontal: 16),
-              //     ),
-              //     onChanged: (value) {
-              //       planProvider.filterPlans(value,widget.folderId);
-              //     },
-              //   ),
-              // ),
               Container(
                 decoration: BoxDecoration(
                   border: Border(
@@ -372,7 +354,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                                 child: TextField(
                                   controller: _searchController,
                                   decoration: InputDecoration(
-                                    hintText: 'Search techniques...',
+                                    hintText: AppStrings.searchTechniqueHint,
                                     border: InputBorder.none,
                                     suffixIcon:
                                         _searchController.text.isNotEmpty
@@ -380,7 +362,6 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                                                 icon: Icon(Icons.clear),
                                                 onPressed: () {
                                                   _searchController.clear();
-                                                  // setState(() {}); // Rebuild to hide the icon
                                                   planProvider.filterPlans(
                                                       '',
                                                       widget
@@ -404,21 +385,6 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                   ),
                 ),
               ),
-              // Padding(
-              //   padding: const EdgeInsets.all(8.0),
-              //   child:
-              //   MultiSelectDialogField(
-              //     items: planProvider.allTags
-              //         .map((tag) => MultiSelectItem<String>(tag, tag))
-              //         .toList(),
-              //     title: Text("Select Tags"),
-              //     buttonText: Text("Filter by Tags"),
-              //     dialogHeight: 300,
-              //     onConfirm: (values) {
-              //       planProvider.applyTagFilter(values.map((tag) => tag.toLowerCase()).toList(),widget.folderId);
-              //     },
-              //   ),
-              // ),
               if (planProvider.getAllCollectionTags(widget.folderId).isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -434,32 +400,6 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                     },
                   ),
                 ),
-              // Expanded(
-              //   child: planProvider.isLoading
-              //       ? const Center(child: CircularProgressIndicator())
-              //       : planProvider.plans.isEmpty
-              //       ? Center(
-              //     child: Padding(
-              //       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              //       child: Text(
-              //         'Plan list is empty, Tap on plus icon to \n Get Started!',
-              //         textAlign: TextAlign.center,
-              //         style: TextStyle(fontSize: 16, color: Colors.grey),
-              //       ),
-              //     ),
-              //   )
-              //       : ListView(
-              //     children: planProvider.plans
-              //         .where((plan) => plan.folderId == widget.folderId)
-              //         .map((plan) {
-              //       return PlanTile(
-              //         plan: plan,
-              //         planProvider: planProvider,
-              //         isCardView: true,
-              //       );
-              //     }).toList(),
-              //   ),
-              // ),
               Expanded(
                 child: planProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -482,7 +422,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 8.0),
                               child: Text(
-                                'Technique list is empty in this collection.\nTap on plus icon to Get Started!',
+                                AppStrings.techniqueCollectionListEmpty,
                                 textAlign: TextAlign.center,
                                 style:
                                     TextStyle(fontSize: 16, color: Colors.grey),
@@ -494,7 +434,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                             children: [
                               Padding(
                                 padding: const EdgeInsets.all(12.0),
-                                child: Text('All Techniques',
+                                child: Text(AppStrings.allTechniques,
                                     style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold)),
@@ -592,52 +532,6 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                   ),
                 ],
               )
-            //     :
-            // FloatingActionButton(
-            //   heroTag: 'createFolder', // Unique tag for each FAB
-            //   backgroundColor: Theme.of(context).primaryColor,
-            //   foregroundColor: Colors.white,
-            //   mini: true,
-            //   onPressed: () {
-            //     final TextEditingController _folderNameController = TextEditingController();
-            //
-            //     showDialog(
-            //       context: context,
-            //       builder: (context) {
-            //         return AlertDialog(
-            //           title: const Text('Create Folder'),
-            //           content: TextField(
-            //             controller: _folderNameController,
-            //             decoration: const InputDecoration(
-            //               labelText: 'Folder Name',
-            //               border: OutlineInputBorder(),
-            //             ),
-            //           ),
-            //           actions: [
-            //             TextButton(
-            //               onPressed: () => Navigator.pop(context), // Close dialog
-            //               child: const Text('Cancel'),
-            //             ),
-            //             ElevatedButton(
-            //               onPressed: () {
-            //                 final folderName = _folderNameController.text.trim();
-            //                 if (folderName.isNotEmpty) {
-            //                   planProvider.createFolder(folderName);
-            //                   Navigator.pop(context); // Close the dialog
-            //                   ScaffoldMessenger.of(context).showSnackBar(
-            //                     SnackBar(content: Text('Folder "$folderName" created!')),
-            //                   );
-            //                 }
-            //               },
-            //               child: const Text('Create'),
-            //             ),
-            //           ],
-            //         );
-            //       },
-            //     );
-            //   },
-            //   child: const Icon(Icons.create_new_folder),
-            // ),
             ,
             const SizedBox(height: 12),
             if (!widget.isShared)

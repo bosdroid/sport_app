@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:bjj_dairy/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
@@ -81,7 +82,7 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                 children: [
                   const SizedBox(width: 24), // Placeholder to center title
                   const Text(
-                    'Options',
+                    AppStrings.optionsTitle,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -95,27 +96,27 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.copy_all),
-                title: const Text('Get Folder'),
+                title: const Text(AppStrings.getFolder),
                 onTap: () async {
                   Navigator.pop(context); // Dismiss bottom sheet
                   if (!isInternetAvailable) {
-                    Util.showMessageDialog(parentContext, 'Internet required to access this folder!');
+                    Util.showMessageDialog(parentContext, AppStrings.internetRequired);
                     return;
                   }
                   if (collection.access == 'private') {
-                    Util.showMessageDialog(parentContext, 'You do not have access to this folder!');
+                    Util.showMessageDialog(parentContext, AppStrings.noAccess);
                     return;
                   } else if (collection.access == 'specific' &&
                       !collection.allowedUsers.contains(planProvider.loggedUserId)) {
-                    Util.showMessageDialog(parentContext, 'You do not have access to this folder!');
+                    Util.showMessageDialog(parentContext, AppStrings.noAccess);
                     return;
                   }
 
                   if (await planProvider.checkFolderPermission(planProvider.loggedUserId, collection.id!)) {
                     await planProvider.copySharedFolderWithTechniques(collection);
-                    await Util.showMessageDialog(parentContext, 'All folder techniques has been copied!');
+                    await Util.showMessageDialog(parentContext, AppStrings.copiedSuccess);
                   } else {
-                    Util.showMessageDialog(parentContext, "You do not have access to this folder!");
+                    Util.showMessageDialog(parentContext, AppStrings.noAccess);
                   }
 
                 },
@@ -159,7 +160,7 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                     ),
                     const Expanded(
                       child: Text(
-                        'Search Folder by Share ID',
+                        AppStrings.searchFolderByShareId,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -183,7 +184,7 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search folders...',
+                    hintText: AppStrings.searchFoldersHint,
                     border: InputBorder.none,
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
@@ -202,7 +203,7 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                     }
                     else{
                       if(!isInternetAvailable){
-                        Util.showMessageDialog(context, 'Internet required to search this folder!');
+                        Util.showMessageDialog(context,AppStrings.internetRequired);
                         return;
                       }
                       planProvider.searchPublicFolders(value);
@@ -215,33 +216,8 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
               SizedBox(
                 height: 120,
                 child: planProvider.searchFolders.isEmpty
-                    ? const Center(child: Text('No folders found'))
+                    ? const Center(child: Text(AppStrings.noFoldersFound))
                     :
-                // ListView.builder(
-                //         itemCount: planProvider.searchFolders.length,
-                //         itemBuilder: (context, index) {
-                //           final collection = planProvider.searchFolders[index];
-                //           return CollectionCard(
-                //             title: collection.name ?? '',
-                //             count: planProvider
-                //                 .getPlanCountForFolder(collection.id!),
-                //             onTap: () {
-                //
-                //               // Navigator.push(
-                //               //   context,
-                //               //   MaterialPageRoute(
-                //               //     builder: (_) => FolderPlansScreen(
-                //               //         folderId: collection.id!),
-                //               //   ),
-                //               // );
-                //             },
-                //             onMore: () {
-                //               // showCollectionOptions(
-                //               //     context, collection, planProvider);
-                //             },
-                //           );
-                //         },
-                //       ),
                 ReorderableListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: planProvider.searchFolders.length,
@@ -265,15 +241,15 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                               userId: planProvider.loggedUserId,
                               onTap: () async {
                                 if (!isInternetAvailable) {
-                                  Util.showMessageDialog(context, 'Internet required to access this folder!');
+                                  Util.showMessageDialog(context, AppStrings.internetRequired);
                                   return;
                                 }
                                 if (collection.access == 'private') {
-                                  Util.showMessageDialog(context, 'You do not have access to this folder!');
+                                  Util.showMessageDialog(context, AppStrings.noAccess);
                                   return;
                                 } else if (collection.access == 'specific' &&
                                     !collection.allowedUsers.contains(planProvider.loggedUserId)) {
-                                  Util.showMessageDialog(context, 'You do not have access to this folder!');
+                                  Util.showMessageDialog(context, AppStrings.noAccess);
                                   return;
                                 }
 
@@ -288,7 +264,7 @@ class _SearchFolderScreenState extends State<SearchFolderScreen> {
                                     ),
                                   );
                                 } else {
-                                  Util.showMessageDialog(context, "You do not have access to this folder!");
+                                  Util.showMessageDialog(context, AppStrings.noAccess);
                                 }
                               },
                               onMore: () {

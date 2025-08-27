@@ -1,3 +1,4 @@
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 
 import 'dotted_border_card.dart';
@@ -16,7 +17,7 @@ class AddCollectionCard extends StatelessWidget {
           children: [
             Icon(Icons.add, color: Colors.grey),
             SizedBox(height: 4),
-            Text('Add\nCollection',
+            Text(AppStrings.addCollectionLabel,
                 textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
           ],
         ),

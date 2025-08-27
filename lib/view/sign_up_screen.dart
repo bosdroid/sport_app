@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/validation_provider.dart';
+import '../utils/app_strings.dart';
 import '../utils/routes/routes_names.dart';
 import '../widgets/password_text_field.dart';
 
@@ -32,11 +33,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email cannot be empty.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.emailEmptyError)));
       return;
     }
     if (password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Password cannot be empty.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.passwordEmptyError)));
       return;
     }
 
@@ -45,7 +46,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, RoutesNames.homeScreen);
     } catch (e) {
-      final errorMsg = authProvider.getErrorMessage(e) ?? 'Something went wrong.';
+      final errorMsg = authProvider.getErrorMessage(e) ?? AppStrings.somethingWentWrong;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
     }
   }
@@ -72,14 +73,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('SIGN UP',style: TextStyle(color: Theme.of(context).primaryColor,fontSize: 18,fontWeight: FontWeight.bold),),
+                    Text(AppStrings.signUpTitle,style: TextStyle(color: Theme.of(context).primaryColor,fontSize: 18,fontWeight: FontWeight.bold),),
                     SizedBox(height: 16,),
                     Consumer<ValidationProvider>(
                       builder: (context, validator, child) {
                         return TextFormField(
                           controller: _usernameController,
                           decoration: InputDecoration(
-                            labelText: 'Username',
+                            labelText: AppStrings.usernameLabel,
                             labelStyle: TextStyle(color: Colors.grey),
                             prefixIcon: Icon(Icons.text_fields, color: Theme.of(context).primaryColor),
                             filled: true,
@@ -121,7 +122,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return TextFormField(
                           controller: _emailController,
                           decoration: InputDecoration(
-                            labelText: 'Email',
+                            labelText: AppStrings.emailLabel,
                             labelStyle: TextStyle(color: Colors.grey),
                             prefixIcon: Icon(Icons.email, color: Theme.of(context).primaryColor),
                             filled: true,
@@ -175,7 +176,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     validator.validateAgreeTerms(value ?? false);
                                   },
                                 ),
-                                const Text("I agree to the Terms and Conditions"),
+                                const Text(AppStrings.agreeTerms),
                               ],
                             ),
                             if (validator.agreeTermsError != null)
@@ -201,7 +202,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           && validationProvider.agreeTermsError == null
                           ? () => _handleSignUp(context,authProvider)
                           : null,
-                      text: 'Sign Up',
+                      text: AppStrings.signUpButton,
                     ),
                     SizedBox(height: 16),
                     TextButton(
@@ -210,7 +211,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         Navigator.pushReplacementNamed(context, RoutesNames.loginScreen); // Navigate to SignupScreen
                       },
                       child: Text(
-                        'Already have an account? Login',
+                        AppStrings.loginRedirect,
                         style: TextStyle(
                           color: Theme.of(context).primaryColor,
                           fontSize: 14,

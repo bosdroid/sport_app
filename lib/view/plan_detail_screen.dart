@@ -1,4 +1,5 @@
 import 'package:bjj_dairy/model/video_entry.dart';
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:bjj_dairy/view/selected_plan_screen.dart';
 import 'package:bjj_dairy/widgets/add_image_card.dart';
 import 'package:bjj_dairy/widgets/full_image_viewer_dialog.dart';
@@ -56,10 +57,6 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     // _tags = plan!.tags;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       Provider.of<ValidationProvider>(context, listen: false).resetAll();
-      // Provider.of<PlanProvider>(context, listen: false)
-      //     .setVideoEntries(plan!.videos ?? []);
-      // Provider.of<PlanProvider>(context, listen: false)
-      //     .setSelectedImages(plan!.images);
     });
     AppAnalytics.logCardViewed(plan!.id, plan!.title);
     _initYoutubeController();
@@ -233,7 +230,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch the URL')),
+          const SnackBar(content: Text(AppStrings.couldNotLaunch)),
         );
       }
     }
@@ -305,7 +302,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         height: 2,
                       ),
                       Text(
-                        'Technique not available',
+                        AppStrings.techniqueNotAvailable,
                         style: TextStyle(
                             color: Colors.red, fontStyle: FontStyle.italic),
                       )
@@ -375,7 +372,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Update Note',
+                AppStrings.updateNoteTitle,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -383,7 +380,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 controller: _noteController,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  hintText: 'Enter your updated note',
+                  hintText: AppStrings.updateNoteLabel,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -393,7 +390,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Cancel'),
+                      child: Text(AppStrings.cancel),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -406,11 +403,11 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           Navigator.of(context).pop();
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Note cannot be empty')),
+                            SnackBar(content: Text(AppStrings.updateNoteEmptyError)),
                           );
                         }
                       },
-                      child: Text('Save'),
+                      child: Text(AppStrings.save),
                     ),
                   ),
                 ],
@@ -461,7 +458,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     SizedBox(
                       width: MediaQuery.of(context).size.width,
                       child: const Text(
-                        'Add Videos',
+                        AppStrings.addVideosTitle,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold),
@@ -507,13 +504,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                       child: TextFormField(
                                         initialValue: entry.url,
                                         decoration:
-                                            _bottomSheetInputDecoration('URL'),
+                                            _bottomSheetInputDecoration(AppStrings.url),
                                         onChanged: (value) {
-                                          // final isYoutube = Util.isYouTubeUrl(value);
-                                          // provider.updateVideoEntry(
-                                          //   index,
-                                          //   entry.copyWith(url: value, isYoutubeUrl: isYoutube),
-                                          // );
                                           final currentEntry = provider
                                                   .videoEntries[
                                               index]; // get the latest entry
@@ -541,7 +533,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                       child: TextFormField(
                                         initialValue: entry.title,
                                         decoration: _bottomSheetInputDecoration(
-                                            'Video Title'),
+                                            AppStrings.videoTitle),
                                         onChanged: (value) {
                                           // provider.updateVideoEntry(index, entry.copyWith(title: value));
                                           final currentEntry = provider
@@ -581,22 +573,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                                             .toString()
                                                         : '',
                                                     decoration: InputDecoration(
-                                                        hintText: 'Minutes',
+                                                        hintText: AppStrings.minutes,
                                                         border: InputBorder.none
-                                                        // filled: true,
-                                                        // fillColor: Colors.grey.shade100,
-                                                        // border: OutlineInputBorder(
-                                                        //   borderRadius: BorderRadius.circular(8),
-                                                        //   borderSide: BorderSide(color: Colors.grey.shade300),
-                                                        // ),
-                                                        // enabledBorder: OutlineInputBorder(
-                                                        //   borderRadius: BorderRadius.circular(8),
-                                                        //   borderSide: BorderSide(color: Colors.grey.shade300),
-                                                        // ),
-                                                        // focusedBorder: OutlineInputBorder(
-                                                        //   borderRadius: BorderRadius.circular(8),
-                                                        //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                                                        // ),
                                                         ),
                                                     keyboardType:
                                                         TextInputType.number,
@@ -646,22 +624,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                                             .toString()
                                                         : '',
                                                     decoration: InputDecoration(
-                                                        hintText: 'Seconds',
+                                                        hintText: AppStrings.seconds,
                                                         border: InputBorder.none
-                                                        // filled: true,
-                                                        // fillColor: Colors.grey.shade100,
-                                                        // border: OutlineInputBorder(
-                                                        //   borderRadius: BorderRadius.circular(8),
-                                                        //   borderSide: BorderSide(color: Colors.grey.shade300),
-                                                        // ),
-                                                        // enabledBorder: OutlineInputBorder(
-                                                        //   borderRadius: BorderRadius.circular(8),
-                                                        //   borderSide: BorderSide(color: Colors.grey.shade300),
-                                                        // ),
-                                                        // focusedBorder: OutlineInputBorder(
-                                                        //   borderRadius: BorderRadius.circular(8),
-                                                        //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                                                        // ),
                                                         ),
                                                     keyboardType:
                                                         TextInputType.number,
@@ -700,7 +664,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                         icon: const Icon(Icons.delete,
                                             color: Colors.red),
                                         label: const Text(
-                                          "Remove",
+                                          AppStrings.remove,
                                           style: TextStyle(color: Colors.red),
                                         ),
                                       ),
@@ -731,7 +695,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       icon: Icon(Icons.add,
                           color: Theme.of(context).primaryColor),
                       label: Text(
-                        'Add Another Video',
+                        AppStrings.addAnotherVideoLabel,
                         style: TextStyle(color: Theme.of(context).primaryColor),
                       ),
                       style: TextButton.styleFrom(
@@ -763,7 +727,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                 errorMessage = '';
                               });
                             },
-                            child: const Text('Cancel',
+                            child: const Text(AppStrings.cancel,
                                 style: TextStyle(color: Colors.red)),
                           ),
                         ),
@@ -773,37 +737,22 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             onPressed: () {
                               if (provider.videoEntries
                                   .any((video) => video.url.isEmpty)) {
-                                // ScaffoldMessenger.of(context).showSnackBar(
-                                //   const SnackBar(content: Text('One or more videos title are empty')),
-                                // );
+
                                 setState(() {
                                   errorMessage =
-                                      'One or more videos url are empty';
+                                      AppStrings.videoUrlEmptyError;
                                 });
                                 return;
                               }
                               if (provider.videoEntries.any((video) =>
                                   !Util.isValidVideoUrl(video.url))) {
-                                // ScaffoldMessenger.of(context).showSnackBar(
-                                //   const SnackBar(content: Text('One or more video URLs are invalid')),
-                                // );
+
                                 setState(() {
                                   errorMessage =
-                                      'One or more video URLs are invalid';
+                                      AppStrings.videoUrlInvalidError;
                                 });
                                 return;
                               }
-                              // if (provider.videoEntries
-                              //     .any((video) => video.title.isEmpty)) {
-                              //   // ScaffoldMessenger.of(context).showSnackBar(
-                              //   //   const SnackBar(content: Text('One or more videos title are empty')),
-                              //   // );
-                              //   setState(() {
-                              //     errorMessage =
-                              //         'One or more videos title are empty';
-                              //   });
-                              //   return;
-                              // }
                               Navigator.pop(context);
                               plan.videos = [
                                 ...plan.videos!,
@@ -816,7 +765,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                   fontSize: 18, fontWeight: FontWeight.bold),
                               foregroundColor: Theme.of(context).primaryColor,
                             ),
-                            child: const Text('Submit'),
+                            child: const Text(AppStrings.submit),
                           ),
                         ),
                       ],
@@ -833,194 +782,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
   InputDecoration _bottomSheetInputDecoration(String hintText) {
     return InputDecoration(hintText: hintText, border: InputBorder.none
-        // filled: true,
-        // fillColor: Colors.white,
-        // border: OutlineInputBorder(
-        //   borderRadius: BorderRadius.circular(8),
-        //   borderSide: BorderSide(color: Colors.grey.shade300),
-        // ),
-        // enabledBorder: OutlineInputBorder(
-        //   borderRadius: BorderRadius.circular(8),
-        //   borderSide: BorderSide(color: Colors.grey.shade300),
-        // ),
-        // focusedBorder: OutlineInputBorder(
-        //   borderRadius: BorderRadius.circular(8),
-        //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-        // ),
         );
   }
-
-  // Future<void> _addTag(String value,BuildContext context) async {
-  //   final tag = value.trim();
-  //   if (tag.isNotEmpty && !_tags.contains(tag)) {
-  //     await Provider.of<ValidationProvider>(context, listen: false).validateTags(_tags,tag);
-  //     if(Provider.of<ValidationProvider>(context, listen: false).tagsError == null) {
-  //       setState(() {
-  //         _tags.add(tag);
-  //         _suggestedTags.remove(tag);
-  //         _tagController.clear();
-  //       });
-  //     }
-  //   }
-  // }
-  //
-  // Widget _buildTagsInput(BuildContext context) {
-  //   // _suggestedTags
-  //   //     .addAll(Provider.of<PlanProvider>(context, listen: false).allTags);
-  //   final allTags = Provider.of<PlanProvider>(context, listen: false).allTags;
-  //   _suggestedTags =
-  //       allTags.where((tag) => !_tags.contains(tag)).toSet().toList();
-  //
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       // Label Row with icon and text
-  //       Row(
-  //         children: [
-  //           Icon(Icons.local_offer_outlined,
-  //               size: 16, color: Theme.of(context).primaryColor),
-  //           SizedBox(width: 4),
-  //           Text(
-  //             'Tags',
-  //             style: TextStyle(
-  //               fontWeight: FontWeight.w600,
-  //               fontSize: 14,
-  //               color: Colors.black,
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       const SizedBox(height: 8),
-  //
-  //       // Suggested tags
-  //       SingleChildScrollView(
-  //         scrollDirection: Axis.horizontal,
-  //         child: Wrap(
-  //           spacing: 8,
-  //           runSpacing: 8,
-  //           children: _suggestedTags.where((suggestion) => suggestion.toLowerCase() != 'all').map((suggestion) {
-  //             return ActionChip(
-  //               label: Text(
-  //                 suggestion,
-  //                 style: const TextStyle(fontSize: 13),
-  //               ),
-  //               backgroundColor: Colors.white,
-  //               shape: StadiumBorder(
-  //                 side: BorderSide(color: Theme.of(context).primaryColor),
-  //               ),
-  //               onPressed: () {
-  //                 if (!_tags.contains(suggestion)) {
-  //                   setState(() {
-  //                     _tags.add(suggestion);
-  //                     _suggestedTags.remove(suggestion);
-  //                   });
-  //                 }
-  //               },
-  //             );
-  //           }).toList(),
-  //         ),
-  //       ),
-  //       const SizedBox(height: 10),
-  //       // Input + Add button
-  //       Row(
-  //         children: [
-  //           Expanded(
-  //             child: Container(
-  //               decoration: BoxDecoration(
-  //                 borderRadius: BorderRadius.circular(8),
-  //                 color: Colors.grey.shade300,
-  //                 border: Border.all(color: Colors.grey.shade100),
-  //               ),
-  //               padding: const EdgeInsets.symmetric(horizontal: 16),
-  //               child:
-  //               // TextField(
-  //               //   controller: _tagController,
-  //               //   decoration: const InputDecoration(
-  //               //     hintText: 'Add custom tag',
-  //               //     border: InputBorder.none,
-  //               //   ),
-  //               //   onSubmitted: (value) => _addTag(value),
-  //               // ),
-  //               Consumer<ValidationProvider>(
-  //                 builder: (context, validator, child) {
-  //                   return TextFormField(
-  //                     controller: _tagController,
-  //                     // onChanged: (value) {
-  //                     //   validator.validateTag(value); // validate on change
-  //                     // },
-  //                     decoration: InputDecoration(
-  //                       hintText: 'Add custom tag',
-  //                       border: InputBorder.none,
-  //                       // filled: true,
-  //                       // fillColor: Colors.grey[200],
-  //                       // border: OutlineInputBorder(
-  //                       //   borderRadius: BorderRadius.circular(30),
-  //                       //   borderSide: BorderSide.none,
-  //                       // ),
-  //                       // focusedBorder: OutlineInputBorder(
-  //                       //   borderRadius: BorderRadius.circular(30),
-  //                       //   borderSide: BorderSide(color: Colors.blue, width: 2),
-  //                       // ),
-  //                       errorText: validator.tagsError,
-  //                       errorBorder: OutlineInputBorder(
-  //                         // borderRadius: BorderRadius.circular(30),
-  //                         borderSide: BorderSide(color: Colors.red),
-  //                       ),
-  //                       focusedErrorBorder: OutlineInputBorder(
-  //                         // borderRadius: BorderRadius.circular(30),
-  //                         borderSide: BorderSide(color: Colors.red, width: 2),
-  //                       ),
-  //                     ),
-  //                   );
-  //                 },
-  //               ),
-  //             ),
-  //           ),
-  //           const SizedBox(width: 8),
-  //           InkWell(
-  //             onTap: () => _addTag(_tagController.text,context),
-  //             child: Container(
-  //               decoration: BoxDecoration(
-  //                 color: Theme.of(context).primaryColor,
-  //                 shape: BoxShape.rectangle,
-  //                 borderRadius: BorderRadius.circular(10),
-  //               ),
-  //               padding: const EdgeInsets.all(14),
-  //               child: const Icon(Icons.add, color: Colors.white, size: 20),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       const SizedBox(height: 8),
-  //       // Selected tags
-  //       Wrap(
-  //         spacing: 8,
-  //         runSpacing: 8,
-  //         children: _tags.map((tag) {
-  //           return Chip(
-  //             label: Text(
-  //               tag,
-  //               style: const TextStyle(fontSize: 13),
-  //             ),
-  //             shape: StadiumBorder(
-  //               side: BorderSide(color: Theme.of(context).primaryColor),
-  //             ),
-  //             backgroundColor: Colors.white,
-  //             deleteIcon: const Icon(Icons.close, size: 16),
-  //             onDeleted: () {
-  //               setState(() {
-  //                 _tags.remove(tag);
-  //                 if (!_suggestedTags.contains(tag)) {
-  //                   _suggestedTags.add(tag);
-  //                 }
-  //               });
-  //             },
-  //           );
-  //         }).toList(),
-  //       ),
-  //     ],
-  //   );
-  // }
 
   Future<void> _addTag(String value, BuildContext context) async {
     final tag = value.trim();
@@ -1039,8 +802,6 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   }
 
   Widget _buildTagsInput(BuildContext context) {
-    // _suggestedTags
-    //     .addAll(Provider.of<PlanProvider>(context, listen: false).allTags);
     final allTags = Provider.of<PlanProvider>(context, listen: false).allTags;
     _suggestedTags =
         allTags.where((tag) => !_tags.contains(tag)).toSet().toList();
@@ -1055,7 +816,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 size: 16, color: Theme.of(context).primaryColor),
             SizedBox(width: 4),
             Text(
-              'Tags',
+              AppStrings.tags,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -1123,25 +884,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       //   validator.validateTag(value); // validate on change
                       // },
                       decoration: InputDecoration(
-                        hintText: 'Add custom tag',
+                        hintText: AppStrings.addCustomTagsLabel,
                         border: InputBorder.none,
-                        // filled: true,
-                        // fillColor: Colors.grey[200],
-                        // border: OutlineInputBorder(
-                        //   borderRadius: BorderRadius.circular(30),
-                        //   borderSide: BorderSide.none,
-                        // ),
-                        // focusedBorder: OutlineInputBorder(
-                        //   borderRadius: BorderRadius.circular(30),
-                        //   borderSide: BorderSide(color: Colors.blue, width: 2),
-                        // ),
                         errorText: validator.tagsError,
                         errorBorder: OutlineInputBorder(
-                          // borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide(color: Colors.red),
                         ),
                         focusedErrorBorder: OutlineInputBorder(
-                          // borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
@@ -1219,7 +968,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 children: [
                   const SizedBox(width: 24), // Placeholder to center title
                   const Text(
-                    'Options',
+                    AppStrings.optionsTitle,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -1235,7 +984,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 leading: const Icon(
                   Icons.checklist_outlined,
                 ),
-                title: const Text('Choose Existing'),
+                title: const Text(AppStrings.chooseExistingLabel),
                 onTap: () async {
                   Navigator.pop(context);
                   Navigator.push(
@@ -1247,22 +996,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       ),
                     ),
                   );
-                  // final updatedPlan = await Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (context) => EditPlanScreen(plan: plan),
-                  //   ),
-                  // );
-                  // if (updatedPlan != null && updatedPlan is Plan) {
-                  //   setState(() {});
-                  // }
                 },
               ),
               ListTile(
                 leading: const Icon(
                   Icons.new_label_outlined,
                 ),
-                title: const Text('Create New'),
+                title: const Text(AppStrings.createNewLabel),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, RoutesNames.addPlanScreen,
@@ -1301,7 +1041,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 children: [
                   const SizedBox(width: 24), // Placeholder to center title
                   const Text(
-                    'Select Status',
+                    AppStrings.selectStatusLabel,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -1322,7 +1062,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     shape: BoxShape.circle,
                   ),
                 ),
-                title: const Text('Neutral'),
+                title: const Text(AppStrings.neutralStatusLabel),
                 onTap: () async {
                   planProvider.updatePlanStatus(plan, 'neutral');
                   Navigator.pop(context);
@@ -1337,7 +1077,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     shape: BoxShape.circle,
                   ),
                 ),
-                title: const Text('Success'),
+                title: const Text(AppStrings.successStatusLabel),
                 onTap: () async {
                   planProvider.updatePlanStatus(plan, 'success');
                   Navigator.pop(context);
@@ -1352,7 +1092,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     shape: BoxShape.circle,
                   ),
                 ),
-                title: const Text('Failure'),
+                title: const Text(AppStrings.failureStatusLabel),
                 onTap: () async {
                   planProvider.updatePlanStatus(plan, 'failure');
                   Navigator.pop(context);
@@ -1401,30 +1141,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 return TextFormField(
                   initialValue: entry.url,
                   decoration: InputDecoration(
-                    hintText: 'URL',
+                    hintText: AppStrings.url,
                     border: InputBorder.none,
                     errorText: validator.urlError,
-                    // Uncomment and customize borders as needed
-                    // filled: true,
-                    // fillColor: Colors.white,
-                    // border: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Colors.grey.shade300),
-                    // ),
-                    // enabledBorder: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Colors.grey.shade300),
-                    // ),
-                    // focusedBorder: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                    // ),
                     errorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red, width: 2),
                     ),
                   ),
@@ -1455,15 +1178,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 return TextFormField(
                   initialValue: entry.title,
                   decoration: InputDecoration(
-                    hintText: 'Video Title',
+                    hintText: AppStrings.videoTitle,
                     border: InputBorder.none,
                     errorText: validator.videoTitleError,
                     errorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red, width: 2),
                     ),
                   ),
@@ -1495,22 +1216,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                               ? (entry.timeInSeconds! ~/ 60).toString()
                               : '',
                           decoration: InputDecoration(
-                            hintText: 'Minutes',
+                            hintText: AppStrings.minutes,
                             border: InputBorder.none,
-                            // filled: true,
-                            // fillColor: Colors.white,
-                            // border: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // enabledBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // focusedBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                            // ),
                           ),
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
@@ -1540,22 +1247,8 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                               ? (entry.timeInSeconds! % 60).toString()
                               : '',
                           decoration: InputDecoration(
-                            hintText: 'Seconds',
+                            hintText: AppStrings.seconds,
                             border: InputBorder.none,
-                            // filled: true,
-                            // fillColor: Colors.white,
-                            // border: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // enabledBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // focusedBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                            // ),
                           ),
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
@@ -1580,33 +1273,11 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
               onPressed: () => provider.removeVideoEntry(index),
               icon: const Icon(Icons.delete, color: Colors.red),
               label: const Text(
-                "Remove",
+                AppStrings.remove,
                 style: TextStyle(color: Colors.red),
               ),
             ),
           ),
-          // const SizedBox(height: 12),
-          // DropdownButtonFormField<String>(
-          //   value: entry.type ?? "Explanation",
-          //   decoration: InputDecoration(
-          //     filled: true,
-          //     fillColor: Colors.grey.shade100,
-          //     border: OutlineInputBorder(
-          //       borderRadius: BorderRadius.circular(8),
-          //       borderSide: BorderSide(color: Colors.grey.shade300),
-          //     ),
-          //   ),
-          //   items: ['Explanation', 'Demo', 'Tutorial'].map((type) {
-          //     return DropdownMenuItem(
-          //       value: type,
-          //       child: Text(type),
-          //     );
-          //   }).toList(),
-          //   onChanged: (value) {
-          //     provider.updateVideoEntry(index, entry.copyWith(type: value));
-          //   },
-          // ),
-          // const SizedBox(height: 16),
         ],
       ),
     );
@@ -1635,7 +1306,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 const Padding(
                   padding: EdgeInsets.all(12.0),
                   child: Text(
-                    "Comments",
+                    AppStrings.commentsTitle,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -1654,7 +1325,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
 
                       if (!snapshot.hasData ||
                           snapshot.data!.snapshot.value == null) {
-                        return const Center(child: Text("No comments yet."));
+                        return const Center(child: Text(AppStrings.commentsListEmptyMessage));
                       }
 
                       final rawComments = Map<String, dynamic>.from(
@@ -1717,7 +1388,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         child: TextField(
                           controller: commentController,
                           decoration: const InputDecoration(
-                            hintText: 'Write a comment...',
+                            hintText: AppStrings.commentTypeHint,
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
@@ -1794,7 +1465,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       ),
                       Expanded(
                         child: Text(
-                          'Details',
+                          AppStrings.detailsTitle,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
@@ -1908,7 +1579,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 ),
                 if(widget.isShared)
                 Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text("You can't edit in view mode",style: TextStyle(color: Colors.red,fontSize: 18),),),
+                child: Text(AppStrings.disableEditModeError,style: TextStyle(color: Colors.red,fontSize: 18),),),
                 if (plan!.description.isNotEmpty || isEditing)
                   Container(
                     width: MediaQuery.of(context).size.width,
@@ -1938,7 +1609,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             size: 18, color: Theme.of(context).primaryColor),
                         SizedBox(width: 6),
                         Text(
-                          "Video Links",
+                          AppStrings.videoLinksTitle,
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -1980,7 +1651,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           icon: Icon(Icons.add,
                               color: Theme.of(context).primaryColor),
                           label: Text(
-                            'Add Another Video',
+                            AppStrings.addAnotherVideoLabel,
                             style: TextStyle(
                                 color: Theme.of(context).primaryColor),
                           ),
@@ -2016,7 +1687,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Videos',
+                              AppStrings.videosLabel,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -2025,7 +1696,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                               ),
                             ),
                             Text(
-                              '${plan!.videos!.length} Videos',
+                              '${plan!.videos!.length} ${AppStrings.videosLabel}',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                   fontSize: 14,
@@ -2084,7 +1755,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                             Icon(Icons.add, color: Colors.grey),
                                             SizedBox(width: 8),
                                             Text(
-                                              'Add Video',
+                                              AppStrings.addVideoLabel,
                                               style: TextStyle(
                                                   color: Colors.grey,
                                                   fontWeight: FontWeight.w500),
@@ -2109,12 +1780,12 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             size: 18, color: Theme.of(context).primaryColor),
                         SizedBox(width: 6),
                         Text(
-                          "Images",
+                         AppStrings.imagesTitle,
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                         SizedBox(width: 4),
                         Text(
-                          "(optional)",
+                          AppStrings.optionalLabel,
                           style: TextStyle(
                               fontWeight: FontWeight.w600, color: Colors.grey),
                         ),
@@ -2137,7 +1808,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           icon: Icon(Icons.upload_outlined,
                               color: Theme.of(context).primaryColor),
                           label: Text(
-                            'Upload Image',
+                            AppStrings.uploadImageLabel,
                             style: TextStyle(
                                 color: Theme.of(context).primaryColor),
                           ),
@@ -2271,7 +1942,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Images',
+                          AppStrings.imagesTitle,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
@@ -2388,7 +2059,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Linked Positions',
+                        AppStrings.linkedPositionsTitle,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
@@ -2402,7 +2073,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("You reach this position from",
+                          const Text(AppStrings.linkedPositionsParentHint,
                               style:
                                   TextStyle(fontSize: 16, color: Colors.grey)),
                           const SizedBox(height: 8),
@@ -2423,7 +2094,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                           padding: const EdgeInsets.symmetric(
                                               vertical: 16),
                                           child: Text(
-                                            "No parent positions added yet.",
+                                            AppStrings.linkedPositionsParentListEmpty,
                                             style:
                                                 TextStyle(color: Colors.grey),
                                           ),
@@ -2469,7 +2140,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                     Icon(Icons.add,
                                         color: Theme.of(context).primaryColor),
                                     SizedBox(width: 4),
-                                    Text("Add",
+                                    Text(AppStrings.addLabel,
                                         style: TextStyle(
                                             color: Theme.of(context)
                                                 .primaryColor)),
@@ -2480,7 +2151,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          const Text("From this position you can transition to",
+                          const Text(AppStrings.linkedPositionsChildHint,
                               style:
                                   TextStyle(fontSize: 16, color: Colors.grey)),
                           const SizedBox(height: 8),
@@ -2501,7 +2172,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                           padding: const EdgeInsets.symmetric(
                                               vertical: 16),
                                           child: Text(
-                                            "No transitions added yet.",
+                                            AppStrings.linkedPositionsChildListEmpty,
                                             style:
                                                 TextStyle(color: Colors.grey),
                                           ),
@@ -2534,14 +2205,6 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                 showAddLinksOptions(
                                     context, widget.plan, planProvider);
                               },
-                              // {
-                              //   Navigator.pushNamed(
-                              //       context, RoutesNames.addPlanScreen,
-                              //       arguments: {
-                              //         "parentId": plan!.id,
-                              //         "isConnection": true
-                              //       });
-                              // },
                               child: Padding(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 8.0),
@@ -2551,7 +2214,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                     Icon(Icons.add,
                                         color: Theme.of(context).primaryColor),
                                     SizedBox(width: 4),
-                                    Text("Add",
+                                    Text(AppStrings.addLabel,
                                         style: TextStyle(
                                             color: Theme.of(context)
                                                 .primaryColor)),
@@ -2587,7 +2250,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             : Icons.thumb_up_outlined,
                         color: Colors.blue,
                       ),
-                      label: Text('${plan!.likedBy.length} Like'),
+                      label: Text('${plan!.likedBy.length} ${AppStrings.likeLabel}'),
                     ),
 
                     // Favourite Button
@@ -2605,7 +2268,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             : Icons.favorite_border,
                         color: Colors.red,
                       ),
-                      label: Text('Favourite'),
+                      label: Text(AppStrings.favouriteLabel),
                     ),
 
                     // Comment Button
@@ -2615,7 +2278,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                             planProvider.loggedUserId);
                       },
                       icon: const Icon(Icons.comment, color: Colors.green),
-                      label: const Text('Comment'),
+                      label: const Text(AppStrings.commentLabel),
                     ),
                   ],
                 ),

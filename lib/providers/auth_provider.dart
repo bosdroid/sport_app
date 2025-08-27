@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart' as crypto;
 
 class AuthProvider with ChangeNotifier {
   final DatabaseReference _usernamesRef = FirebaseDatabase.instance.ref().child('USERNAMES/');
@@ -169,6 +174,75 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> loginWithApple() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      // Ask Apple for credential
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      // Create OAuth credential for Firebase
+      final oauthCredential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      // Sign in with Firebase
+      final authResult = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      _user = authResult.user;
+
+      // Save session
+      final prefs = await SharedPreferences.getInstance();
+
+      // Check if username exists in DB
+      final userSnapshot = await _usernamesRef.child(_user!.uid).get();
+
+      if (!userSnapshot.exists) {
+        // Create default username
+        String defaultUsername = await _generateDefaultUsername();
+        await _usernamesRef.child(_user!.uid).set({'username': defaultUsername});
+        await _usersDetailsRef.child(defaultUsername).update({
+          'id': _user!.uid,
+          'username': defaultUsername,
+          'email': _user!.email,
+          'type': 'apple'
+        });
+        prefs.setString('user_name', defaultUsername);
+      } else {
+        final value = userSnapshot.value as Map?;
+        final String username = value?['username'];
+        prefs.setString('user_name', username);
+
+        await _usersDetailsRef.child(username).update({
+          'id': _user!.uid,
+          'username': username,
+          'email': _user!.email,
+          'type': 'apple'
+        });
+      }
+
+      prefs.setString('user_email', _user!.email ?? "");
+
+      notifyListeners();
+    }catch (e) {
+      throw e;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+
   Future<String> _generateDefaultUsername() async {
     final snapshot = await _usernamesRef.orderByChild('username').limitToLast(1).get();
 
@@ -185,7 +259,29 @@ class AuthProvider with ChangeNotifier {
     return 'user${newNumber.toString().padLeft(3, '0')}';
   }
 
-  String? getErrorMessage(Object e){
+  String getAppleLoginErrorMessage(Object e) {
+    if (e is SignInWithAppleAuthorizationException) {
+      switch (e.code) {
+        case AuthorizationErrorCode.canceled:
+          return "Apple login was cancelled by the user.";
+        case AuthorizationErrorCode.failed:
+          return "Apple login failed. Please try again.";
+        case AuthorizationErrorCode.invalidResponse:
+          return "Invalid response from Apple login.";
+        case AuthorizationErrorCode.notHandled:
+          return "Apple login was not handled.";
+        case AuthorizationErrorCode.unknown:
+          return "An unknown error occurred during Apple login.";
+        default:
+          return "Something went wrong. Please try again.";
+      }
+    }
+
+    // fallback if it's not the expected exception type
+    return "Unexpected error during Apple login: ${e.toString()}";
+  }
+
+  String getErrorMessage(Object e){
     String errorMessage;
     FirebaseAuthException authException = e as FirebaseAuthException;
     switch (authException.code) {
@@ -208,7 +304,7 @@ class AuthProvider with ChangeNotifier {
         errorMessage = 'This username is already taken. Please choose another.';
         break;
       default:
-        errorMessage = 'Login failed: ${e.message}';
+        errorMessage = 'Unexpected error during Login : ${e.message}';
     }
     return errorMessage;
   }
@@ -238,4 +334,17 @@ class AuthProvider with ChangeNotifier {
     }
     return null; // Valid username
   }
+
+  String _generateNonce([int length = 32]) {
+    final random = Random.secure();
+    final charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = crypto.sha256.convert(bytes);
+    return digest.toString();
+  }
+
 }

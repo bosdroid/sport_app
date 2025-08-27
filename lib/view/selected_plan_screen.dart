@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/plan.dart';
 import '../providers/plan_provider.dart';
+import '../utils/app_strings.dart';
 
 class SelectPlanScreen extends StatefulWidget {
   final String? planId;
@@ -31,7 +32,7 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Select Plans'),
+        title: const Text(AppStrings.selectPlansTitle),
         actions: [
           IconButton(
             icon: Icon(Icons.close), // ❌ Close
@@ -74,7 +75,7 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search...',
+                hintText: AppStrings.searchHint,
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -94,7 +95,7 @@ class _SelectPlanScreenState extends State<SelectPlanScreen> {
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8.0),
                           child: Text(
-                            'Plan list is empty. Tap the + icon to get started!',
+                            AppStrings.emptyPlanList,
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),

@@ -1,4 +1,5 @@
 import 'package:bjj_dairy/providers/profile_provider.dart';
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -54,7 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Expanded(
                         child: Text(
-                          'Profile Details',
+                          AppStrings.profileDetails,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
@@ -77,12 +78,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: ListView(
                       children: [
                         ListTile(
-                          title: Text('Username',style: TextStyle(color: Colors.black,fontWeight: FontWeight.bold),),
+                          title: Text(AppStrings.profileUsernameLabel,style: TextStyle(color: Colors.black,fontWeight: FontWeight.bold),),
                           subtitle: Text('${profileProvider.loggedUser?.username}'),
                         ),
                         Divider(height: 1,color: Colors.grey.shade300,),
                         ListTile(
-                          title: Text('Email'),
+                          title: Text(AppStrings.profileEmailLabel,style: TextStyle(color: Colors.black,fontWeight: FontWeight.bold),),
                           subtitle: Text('${profileProvider.loggedUser?.email}'),
                         )
                       ],

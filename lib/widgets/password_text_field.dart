@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/validation_provider.dart';
+import '../utils/app_strings.dart';
 
 class PasswordTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -32,7 +33,7 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
             // }
           },
           decoration: InputDecoration(
-            labelText: 'Password',
+            labelText: AppStrings.loginPasswordLabel,
             labelStyle: TextStyle(color: Colors.grey),
             prefixIcon: Icon(Icons.lock, color: Theme.of(context).primaryColor),
             filled: true,

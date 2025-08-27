@@ -1,4 +1,5 @@
 import 'package:bjj_dairy/model/video_entry.dart';
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:bjj_dairy/widgets/description_field.dart';
@@ -34,10 +35,6 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
       Provider.of<ValidationProvider>(context, listen: false).resetAll();
       Provider.of<PlanProvider>(context, listen: false).resetVideoEntries();
       Provider.of<PlanProvider>(context, listen: false).resetUploadImages();
-      // if(Provider.of<PlanProvider>(context, listen: false).videoEntries.isEmpty){
-      //   Provider.of<PlanProvider>(context, listen: false)
-      //       .addVideoEntry(VideoEntry(title: '', url: '', isYoutubeUrl: false));
-      // }
     });
   }
 
@@ -76,30 +73,13 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                 return TextFormField(
                   initialValue: entry.url,
                   decoration: InputDecoration(
-                    hintText: 'URL',
+                    hintText: AppStrings.url,
                     border: InputBorder.none,
                     errorText: validator.urlError,
-                    // Uncomment and customize borders as needed
-                    // filled: true,
-                    // fillColor: Colors.white,
-                    // border: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Colors.grey.shade300),
-                    // ),
-                    // enabledBorder: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Colors.grey.shade300),
-                    // ),
-                    // focusedBorder: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                    // ),
                     errorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red, width: 2),
                     ),
                   ),
@@ -130,15 +110,13 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                 return TextFormField(
                   initialValue: entry.title,
                   decoration: InputDecoration(
-                    hintText: 'Video Title',
+                    hintText: AppStrings.videoTitle,
                     border: InputBorder.none,
                     errorText: validator.videoTitleError,
                     errorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red, width: 2),
                     ),
                   ),
@@ -170,22 +148,8 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                               ? (entry.timeInSeconds! ~/ 60).toString()
                               : '',
                           decoration: InputDecoration(
-                            hintText: 'Minutes',
+                            hintText: AppStrings.minutes,
                             border: InputBorder.none,
-                            // filled: true,
-                            // fillColor: Colors.white,
-                            // border: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // enabledBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // focusedBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                            // ),
                           ),
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
@@ -215,22 +179,8 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                               ? (entry.timeInSeconds! % 60).toString()
                               : '',
                           decoration: InputDecoration(
-                            hintText: 'Seconds',
+                            hintText: AppStrings.seconds,
                             border: InputBorder.none,
-                            // filled: true,
-                            // fillColor: Colors.white,
-                            // border: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // enabledBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Colors.grey.shade300),
-                            // ),
-                            // focusedBorder: OutlineInputBorder(
-                            //   borderRadius: BorderRadius.circular(8),
-                            //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                            // ),
                           ),
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
@@ -260,28 +210,6 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
               ),
             ),
           ),
-          // const SizedBox(height: 12),
-          // DropdownButtonFormField<String>(
-          //   value: entry.type ?? "Explanation",
-          //   decoration: InputDecoration(
-          //     filled: true,
-          //     fillColor: Colors.grey.shade100,
-          //     border: OutlineInputBorder(
-          //       borderRadius: BorderRadius.circular(8),
-          //       borderSide: BorderSide(color: Colors.grey.shade300),
-          //     ),
-          //   ),
-          //   items: ['Explanation', 'Demo', 'Tutorial'].map((type) {
-          //     return DropdownMenuItem(
-          //       value: type,
-          //       child: Text(type),
-          //     );
-          //   }).toList(),
-          //   onChanged: (value) {
-          //     provider.updateVideoEntry(index, entry.copyWith(type: value));
-          //   },
-          // ),
-          // const SizedBox(height: 16),
         ],
       ),
     );
@@ -320,7 +248,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                 size: 16, color: Theme.of(context).primaryColor),
             SizedBox(width: 4),
             Text(
-              'Tags',
+              AppStrings.tags,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -384,29 +312,14 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                   builder: (context, validator, child) {
                     return TextFormField(
                       controller: _tagController,
-                      // onChanged: (value) {
-                      //   validator.validateTag(value); // validate on change
-                      // },
                       decoration: InputDecoration(
-                        hintText: 'Add custom tag',
+                        hintText: AppStrings.addCustomTagsLabel,
                         border: InputBorder.none,
-                        // filled: true,
-                        // fillColor: Colors.grey[200],
-                        // border: OutlineInputBorder(
-                        //   borderRadius: BorderRadius.circular(30),
-                        //   borderSide: BorderSide.none,
-                        // ),
-                        // focusedBorder: OutlineInputBorder(
-                        //   borderRadius: BorderRadius.circular(30),
-                        //   borderSide: BorderSide(color: Colors.blue, width: 2),
-                        // ),
                         errorText: validator.tagsError,
                         errorBorder: OutlineInputBorder(
-                          // borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide(color: Colors.red),
                         ),
                         focusedErrorBorder: OutlineInputBorder(
-                          // borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
@@ -501,7 +414,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                     ),
                     Expanded(
                       child: Text(
-                        'New Technique',
+                        AppStrings.createNewTechniqueTitle,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
@@ -513,7 +426,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                     planProvider.isLoading
                         ? CircularProgressIndicator()
                         : PrimaryButton(
-                            text: 'Save',
+                            text: AppStrings.save,
                             width: 100,
                             onPressed: (_titleController.text.isNotEmpty &&
                                     validationProvider.titleError == null)
@@ -523,23 +436,17 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                                           .showSnackBar(
                                         const SnackBar(
                                             content: Text(
-                                                'Title field is required!')),
+                                                AppStrings.techniqueTitleEmptyError)),
                                       );
                                       return;
                                     }
-                                    // if (planProvider.videoEntries.any((video) => video.title.isEmpty)) {
-                                    //   ScaffoldMessenger.of(context).showSnackBar(
-                                    //     const SnackBar(content: Text('Video Title is required!')),
-                                    //   );
-                                    //   return;
-                                    // }
                                     if (planProvider.videoEntries.any((video) =>
                                         !Util.isValidVideoUrl(video.url))) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         const SnackBar(
                                             content: Text(
-                                                'One or more video URLs are invalid')),
+                                                AppStrings.videoUrlInvalidError)),
                                       );
                                       return;
                                     }
@@ -566,37 +473,6 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // TextField(
-                      //   controller: _titleController,
-                      //   decoration: InputDecoration(
-                      //     labelText: 'Plan Title',
-                      //     hintText: 'Enter plan title',
-                      //     labelStyle: TextStyle(color: Colors.grey),
-                      //     prefixIcon: Icon(Icons.text_fields,
-                      //         color: Theme.of(context).primaryColor),
-                      //     filled: true,
-                      //     fillColor: Colors.grey[200],
-                      //     border: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(30),
-                      //       // Rounded edges
-                      //       borderSide: BorderSide.none, // Removes default border
-                      //     ),
-                      //     focusedBorder: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(30),
-                      //       borderSide: BorderSide(
-                      //           color: Theme.of(context).primaryColor,
-                      //           width: 2), // Blue border when focused
-                      //     ),
-                      //     enabledBorder: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(30),
-                      //       borderSide: BorderSide(color: Colors.grey.shade300),
-                      //     ),
-                      //     contentPadding:
-                      //         EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                      //   ),
-                      //   style: TextStyle(fontSize: 16),
-                      //   keyboardType: TextInputType.text,
-                      // ),
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: TitleInputField(controller: _titleController),
@@ -638,7 +514,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                                 color: Theme.of(context).primaryColor),
                             SizedBox(width: 6),
                             Text(
-                              "Video Links",
+                              AppStrings.videoLinksTitle,
                               style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -674,7 +550,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                               icon: Icon(Icons.add,
                                   color: Theme.of(context).primaryColor),
                               label: Text(
-                                'Add Another Video',
+                                AppStrings.addAnotherVideoLabel,
                                 style: TextStyle(
                                     color: Theme.of(context).primaryColor),
                               ),
@@ -704,12 +580,12 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                                 color: Theme.of(context).primaryColor),
                             SizedBox(width: 6),
                             Text(
-                              "Images",
+                              AppStrings.imagesTitle,
                               style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                             SizedBox(width: 4),
                             Text(
-                              "(optional)",
+                              AppStrings.optionalLabel,
                               style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: Colors.grey),
@@ -730,7 +606,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                               icon: Icon(Icons.upload_outlined,
                                   color: Theme.of(context).primaryColor),
                               label: Text(
-                                'Upload Image',
+                                AppStrings.uploadImageLabel,
                                 style: TextStyle(
                                     color: Theme.of(context).primaryColor),
                               ),
@@ -856,7 +732,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                         child: planProvider.isLoading
                             ? Center(child: CircularProgressIndicator())
                             : PrimaryButton(
-                                text: 'Save Technique',
+                                text: AppStrings.saveTechniqueLabel,
                                 onPressed: (_titleController.text.isNotEmpty &&
                                         validationProvider.titleError == null)
                                     ? () async {
@@ -865,16 +741,10 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                                               .showSnackBar(
                                             const SnackBar(
                                                 content: Text(
-                                                    'Title field is required!')),
+                                                    AppStrings.techniqueTitleEmptyError)),
                                           );
                                           return;
                                         }
-                                        // if (planProvider.videoEntries.any((video) => video.title.isEmpty)) {
-                                        //   ScaffoldMessenger.of(context).showSnackBar(
-                                        //     const SnackBar(content: Text('Video Title is required!')),
-                                        //   );
-                                        //   return;
-                                        // }
                                         if (planProvider.videoEntries.any(
                                             (video) => !Util.isValidVideoUrl(
                                                 video.url))) {
@@ -882,7 +752,7 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                                               .showSnackBar(
                                             const SnackBar(
                                                 content: Text(
-                                                    'One or more video URLs are invalid')),
+                                                    AppStrings.videoUrlInvalidError)),
                                           );
                                           return;
                                         }
@@ -901,42 +771,6 @@ class _AddPlanScreenState extends State<AddPlanScreen> {
                                       }
                                     : null),
                       )
-                      // planProvider.isLoading
-                      //     ? CircularProgressIndicator()
-                      //     : PrimaryButton(
-                      //   text: 'Add Plan',
-                      //   onPressed: () async {
-                      //     if (_titleController.text.isEmpty) {
-                      //       ScaffoldMessenger.of(context).showSnackBar(
-                      //         const SnackBar(content: Text('Title field is required!')),
-                      //       );
-                      //       return;
-                      //     }
-                      //     // if (planProvider.videoEntries.any((video) => video.title.isEmpty)) {
-                      //     //   ScaffoldMessenger.of(context).showSnackBar(
-                      //     //     const SnackBar(content: Text('Video Title is required!')),
-                      //     //   );
-                      //     //   return;
-                      //     // }
-                      //     if (planProvider.videoEntries.any((video) => !Util.isValidVideoUrl(video.url))) {
-                      //       ScaffoldMessenger.of(context).showSnackBar(
-                      //         const SnackBar(content: Text('One or more video URLs are invalid')),
-                      //       );
-                      //       return;
-                      //     }
-                      //     await planProvider.addPlan(
-                      //       title: _titleController.text.trim(),
-                      //       description: _descriptionController.text.trim(),
-                      //         videos: planProvider.videoEntries,
-                      //       tags: _tags,
-                      //       parentId: widget.parentId,
-                      //       isConnection: widget.isConnection!,
-                      //       collectionId: widget.folderId
-                      //     );
-                      //
-                      //     Navigator.pop(context);
-                      //   },
-                      // ),
                     ],
                   ),
                 ),

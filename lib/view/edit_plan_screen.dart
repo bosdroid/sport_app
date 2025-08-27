@@ -7,6 +7,7 @@ import '../model/plan.dart';
 import '../model/video_entry.dart';
 import '../providers/plan_provider.dart';
 import '../providers/validation_provider.dart';
+import '../utils/app_strings.dart';
 import '../utils/utils.dart';
 import '../widgets/description_field.dart';
 import '../widgets/title_input_field.dart';
@@ -82,30 +83,13 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                 return TextFormField(
                   initialValue: entry.url,
                   decoration: InputDecoration(
-                    hintText: 'URL',
+                    hintText: AppStrings.url,
                     border: InputBorder.none,
                     errorText: validator.urlError,
-                    // Uncomment and customize borders as needed
-                    // filled: true,
-                    // fillColor: Colors.white,
-                    // border: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Colors.grey.shade300),
-                    // ),
-                    // enabledBorder: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Colors.grey.shade300),
-                    // ),
-                    // focusedBorder: OutlineInputBorder(
-                    //   borderRadius: BorderRadius.circular(8),
-                    //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                    // ),
                     errorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red, width: 2),
                     ),
                   ),
@@ -137,15 +121,13 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                 return TextFormField(
                   initialValue: entry.title,
                   decoration: InputDecoration(
-                    hintText: 'Video Title',
+                    hintText: AppStrings.videoTitle,
                     border: InputBorder.none,
                     errorText: validator.videoTitleError,
                     errorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
-                      // borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide(color: Colors.red, width: 2),
                     ),
                   ),
@@ -177,22 +159,8 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                         ? (entry.timeInSeconds! ~/ 60).toString()
                         : '',
                     decoration: InputDecoration(
-                      hintText: 'Minutes',
+                      hintText: AppStrings.minutes,
                       border: InputBorder.none,
-                      // filled: true,
-                      // fillColor: Colors.white,
-                      // border: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // enabledBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // focusedBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                      // ),
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
@@ -222,22 +190,8 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                         ? (entry.timeInSeconds! % 60).toString()
                         : '',
                     decoration: InputDecoration(
-                      hintText: 'Seconds',
+                      hintText: AppStrings.seconds,
                       border: InputBorder.none,
-                      // filled: true,
-                      // fillColor: Colors.white,
-                      // border: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // enabledBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Colors.grey.shade300),
-                      // ),
-                      // focusedBorder: OutlineInputBorder(
-                      //   borderRadius: BorderRadius.circular(8),
-                      //   borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-                      // ),
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
@@ -262,33 +216,11 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
               onPressed: () => provider.removeVideoEntry(index),
               icon: const Icon(Icons.delete, color: Colors.red),
               label: const Text(
-                "Remove",
+                AppStrings.remove,
                 style: TextStyle(color: Colors.red),
               ),
             ),
           ),
-          // const SizedBox(height: 12),
-          // DropdownButtonFormField<String>(
-          //   value: entry.type ?? "Explanation",
-          //   decoration: InputDecoration(
-          //     filled: true,
-          //     fillColor: Colors.grey.shade100,
-          //     border: OutlineInputBorder(
-          //       borderRadius: BorderRadius.circular(8),
-          //       borderSide: BorderSide(color: Colors.grey.shade300),
-          //     ),
-          //   ),
-          //   items: ['Explanation', 'Demo', 'Tutorial'].map((type) {
-          //     return DropdownMenuItem(
-          //       value: type,
-          //       child: Text(type),
-          //     );
-          //   }).toList(),
-          //   onChanged: (value) {
-          //     provider.updateVideoEntry(index, entry.copyWith(type: value));
-          //   },
-          // ),
-          // const SizedBox(height: 16),
         ],
       ),
     );
@@ -311,8 +243,6 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
   }
 
   Widget _buildTagsInput(BuildContext context) {
-    // _suggestedTags
-    //     .addAll(Provider.of<PlanProvider>(context, listen: false).allTags);
     final allTags = Provider.of<PlanProvider>(context, listen: false).allTags;
     _suggestedTags =
         allTags.where((tag) => !_tags.contains(tag)).toSet().toList();
@@ -327,7 +257,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                 size: 16, color: Theme.of(context).primaryColor),
             SizedBox(width: 4),
             Text(
-              'Tags',
+              AppStrings.tags,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -395,25 +325,13 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                       //   validator.validateTag(value); // validate on change
                       // },
                       decoration: InputDecoration(
-                        hintText: 'Add custom tag',
+                        hintText: AppStrings.addCustomTagsLabel,
                         border: InputBorder.none,
-                        // filled: true,
-                        // fillColor: Colors.grey[200],
-                        // border: OutlineInputBorder(
-                        //   borderRadius: BorderRadius.circular(30),
-                        //   borderSide: BorderSide.none,
-                        // ),
-                        // focusedBorder: OutlineInputBorder(
-                        //   borderRadius: BorderRadius.circular(30),
-                        //   borderSide: BorderSide(color: Colors.blue, width: 2),
-                        // ),
                         errorText: validator.tagsError,
                         errorBorder: OutlineInputBorder(
-                          // borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide(color: Colors.red),
                         ),
                         focusedErrorBorder: OutlineInputBorder(
-                          // borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
@@ -482,7 +400,6 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAFB),
-        // appBar: AppBar(title: const Text('Update Plan')),
         body: SafeArea(
           child: Column(
             children: [
@@ -508,7 +425,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                     ),
                     Expanded(
                       child: Text(
-                        'Update Technique',
+                        AppStrings.updateTechniqueLabel,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
@@ -520,7 +437,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                     planProvider.isLoading
                         ? CircularProgressIndicator()
                         : PrimaryButton(
-                            text: 'Update',
+                            text: AppStrings.update,
                             width: 100,
                             onPressed: (_titleController.text.isNotEmpty &&
                                 validationProvider.titleError == null)
@@ -529,26 +446,17 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                       content:
-                                          Text('Title field is required!')),
+                                          Text(AppStrings.techniqueTitleEmptyError)),
                                 );
                                 return;
                               }
-
-                              // if (planProvider.videoEntries
-                              //     .any((video) => video.title.isEmpty)) {
-                              //   ScaffoldMessenger.of(context).showSnackBar(
-                              //     const SnackBar(
-                              //         content: Text('Video Title is required!')),
-                              //   );
-                              //   return;
-                              // }
 
                               if (planProvider.videoEntries.any((video) =>
                                   !Util.isValidVideoUrl(video.url))) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                       content: Text(
-                                          'One or more video URLs are invalid')),
+                                          AppStrings.videoUrlInvalidError)),
                                 );
                                 return;
                               }
@@ -620,7 +528,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                                 color: Theme.of(context).primaryColor),
                             SizedBox(width: 6),
                             Text(
-                              "Video Links",
+                              AppStrings.videoLinksTitle,
                               style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -653,7 +561,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                               icon: Icon(Icons.add,
                                   color: Theme.of(context).primaryColor),
                               label: Text(
-                                'Add Another Video',
+                                AppStrings.addAnotherVideoLabel,
                                 style: TextStyle(
                                     color: Theme.of(context).primaryColor),
                               ),
@@ -683,12 +591,12 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                                 color: Theme.of(context).primaryColor),
                             SizedBox(width: 6),
                             Text(
-                              "Images",
+                              AppStrings.imagesTitle,
                               style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                             SizedBox(width: 4),
                             Text(
-                              "(optional)",
+                              AppStrings.optionalLabel,
                               style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: Colors.grey),
@@ -709,7 +617,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                               icon: Icon(Icons.upload_outlined,
                                   color: Theme.of(context).primaryColor),
                               label: Text(
-                                'Upload Image',
+                                AppStrings.uploadImageLabel,
                                 style: TextStyle(
                                     color: Theme.of(context).primaryColor),
                               ),
@@ -835,7 +743,7 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                         child: planProvider.isLoading
                             ? Center(child: CircularProgressIndicator())
                             : PrimaryButton(
-                                text: 'Update Technique',
+                                text: AppStrings.updateTechniqueLabel,
                                 onPressed: (_titleController.text.isNotEmpty &&
                                     validationProvider.titleError == null)
                                     ? () async {
@@ -843,26 +751,17 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                           content:
-                                              Text('Title field is required!')),
+                                              Text(AppStrings.techniqueTitleEmptyError)),
                                     );
                                     return;
                                   }
-
-                                  // if (planProvider.videoEntries
-                                  //     .any((video) => video.title.isEmpty)) {
-                                  //   ScaffoldMessenger.of(context).showSnackBar(
-                                  //     const SnackBar(
-                                  //         content: Text('Video Title is required!')),
-                                  //   );
-                                  //   return;
-                                  // }
 
                                   if (planProvider.videoEntries.any((video) =>
                                       !Util.isValidVideoUrl(video.url))) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                           content: Text(
-                                              'One or more video URLs are invalid')),
+                                              AppStrings.videoUrlInvalidError)),
                                     );
                                     return;
                                   }
@@ -886,214 +785,6 @@ class _EditPlanScreenState extends State<EditPlanScreen> {
                                 }:null,
                               ),
                       )
-                      // const SizedBox(height: 20),
-                      //         TextField(
-                      //           controller: _titleController,
-                      //           decoration: InputDecoration(
-                      //             labelText: 'Plan Title',
-                      //             hintText: 'Enter plan title',
-                      //             labelStyle: TextStyle(color: Colors.grey),
-                      //             prefixIcon: Icon(Icons.text_fields,
-                      //                 color: Theme.of(context).primaryColor),
-                      //             filled: true,
-                      //             fillColor: Colors.grey[200],
-                      //             border: OutlineInputBorder(
-                      //               borderRadius: BorderRadius.circular(30), // Rounded edges
-                      //               borderSide: BorderSide.none, // Removes default border
-                      //             ),
-                      //             focusedBorder: OutlineInputBorder(
-                      //               borderRadius: BorderRadius.circular(30),
-                      //               borderSide: BorderSide(
-                      //                   color: Theme.of(context).primaryColor,
-                      //                   width: 2), // Blue border when focused
-                      //             ),
-                      //             enabledBorder: OutlineInputBorder(
-                      //               borderRadius: BorderRadius.circular(30),
-                      //               borderSide: BorderSide(color: Colors.grey.shade300),
-                      //             ),
-                      //             contentPadding:
-                      //                 EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                      //           ),
-                      //           style: TextStyle(fontSize: 16),
-                      //           keyboardType: TextInputType.text,
-                      //         ),
-                      //         const SizedBox(height: 16),
-                      //         DescriptionField(
-                      //           initialDescription: widget.plan.description,
-                      //           onChanged: (description) {
-                      //             _descriptionController.text = description;
-                      //           },
-                      //         ),
-                      //         const SizedBox(height: 16),
-                      //         _buildTagsInput(),
-                      //         const SizedBox(height: 16),
-                      //         Column(
-                      //           crossAxisAlignment: CrossAxisAlignment.start,
-                      //           children: [
-                      //             // + Button to pick images
-                      //             ElevatedButton.icon(
-                      //               onPressed: () {
-                      //                 planProvider
-                      //                     .pickImages(); // Call your existing pickImages method
-                      //               },
-                      //               icon: Icon(Icons.add),
-                      //               label: Text('Add Images'),
-                      //             ),
-                      //
-                      //             const SizedBox(height: 16),
-                      //             // Show selected images horizontally
-                      //             if (planProvider.selectedImages.isNotEmpty)
-                      //               SizedBox(
-                      //                 height: 100, // Adjust height as needed
-                      //                 child: ListView.builder(
-                      //                   scrollDirection: Axis.horizontal,
-                      //                   itemCount: planProvider.selectedImages.length,
-                      //                   itemBuilder: (context, index) {
-                      //                     final selectedImage = planProvider.selectedImages[index];
-                      //                     return Stack(
-                      //                       children: [
-                      //                         Container(
-                      //                           margin: const EdgeInsets.only(right: 8),
-                      //                           child: ClipRRect(
-                      //                             borderRadius: BorderRadius.circular(8),
-                      //                             child: selectedImage.isLocal
-                      //                                 ? Image.file(
-                      //                               selectedImage.localFile!,
-                      //                               width: 100,
-                      //                               height: 100,
-                      //                               fit: BoxFit.cover,
-                      //                             )
-                      //                                 : Image.network(
-                      //                               selectedImage.url!,
-                      //                               width: 100,
-                      //                               height: 100,
-                      //                               fit: BoxFit.cover,
-                      //                               loadingBuilder: (context, child, loadingProgress) {
-                      //                                 if (loadingProgress == null) return child;
-                      //                                 return Container(
-                      //                                   width: 100,
-                      //                                   height: 100,
-                      //                                   color: Colors.grey[300],
-                      //                                   child: const Center(
-                      //                                     child: CircularProgressIndicator(strokeWidth: 2),
-                      //                                   ),
-                      //                                 );
-                      //                               },
-                      //                               errorBuilder: (context, error, stackTrace) {
-                      //                                 return Container(
-                      //                                   width: 100,
-                      //                                   height: 100,
-                      //                                   color: Colors.grey[300],
-                      //                                   child: const Icon(Icons.error, color: Colors.red),
-                      //                                 );
-                      //                               },
-                      //                             ),
-                      //                           ),
-                      //                         ),
-                      //                         // Remove button
-                      //                         Positioned(
-                      //                           top: 0,
-                      //                           right: 0,
-                      //                           child: GestureDetector(
-                      //                             onTap: () {
-                      //                               planProvider.removeSelectedImage(index);
-                      //                             },
-                      //                             child: Container(
-                      //                               decoration: BoxDecoration(
-                      //                                 color: Colors.black54,
-                      //                                 shape: BoxShape.circle,
-                      //                               ),
-                      //                               child: const Icon(
-                      //                                 Icons.close,
-                      //                                 color: Colors.white,
-                      //                                 size: 20,
-                      //                               ),
-                      //                             ),
-                      //                           ),
-                      //                         ),
-                      //                       ],
-                      //                     );
-                      //                   },
-                      //                 ),
-                      //               ),
-                      //           ],
-                      //         ),
-                      //         const SizedBox(height: 16),
-                      //         // Videos Section
-                      //         const Align(
-                      //           alignment: Alignment.centerLeft,
-                      //           child: Text('Videos',
-                      //               style:
-                      //                   TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      //         ),
-                      //         const SizedBox(height: 8),
-                      //         Consumer<PlanProvider>(
-                      //           builder: (context, planProvider, _) {
-                      //             final videoEntries = planProvider.videoEntries;
-                      //             return Column(
-                      //               children: List.generate(videoEntries.length, (index) {
-                      //                 return _buildVideoEntry(context, planProvider, index);
-                      //               }),
-                      //             );
-                      //           },
-                      //         ),
-                      //         const SizedBox(height: 10),
-                      //         TextButton.icon(
-                      //           icon: const Icon(Icons.add),
-                      //           label: const Text('Add Video'),
-                      //           onPressed: () {
-                      //             planProvider.addVideoEntry(
-                      //               VideoEntry(title: '', url: '', isYoutubeUrl: false),
-                      //             );
-                      //           },
-                      //         ),
-                      //         const SizedBox(height: 24),
-                      //         planProvider.isLoading
-                      //             ? CircularProgressIndicator()
-                      //             : PrimaryButton(
-                      //                 text: 'Update Plan',
-                      //                 onPressed: () async {
-                      //                   if (_titleController.text.isEmpty) {
-                      //                     ScaffoldMessenger.of(context).showSnackBar(
-                      //                       const SnackBar(
-                      //                           content: Text('Title field is required!')),
-                      //                     );
-                      //                     return;
-                      //                   }
-                      //
-                      //                   // if (planProvider.videoEntries
-                      //                   //     .any((video) => video.title.isEmpty)) {
-                      //                   //   ScaffoldMessenger.of(context).showSnackBar(
-                      //                   //     const SnackBar(
-                      //                   //         content: Text('Video Title is required!')),
-                      //                   //   );
-                      //                   //   return;
-                      //                   // }
-                      //
-                      //                   if (planProvider.videoEntries.any(
-                      //                       (video) => !Util.isValidVideoUrl(video.url))) {
-                      //                     ScaffoldMessenger.of(context).showSnackBar(
-                      //                       const SnackBar(
-                      //                           content: Text(
-                      //                               'One or more video URLs are invalid')),
-                      //                     );
-                      //                     return;
-                      //                   }
-                      //                   Plan updatePlan = Plan(
-                      //                       id: plan!.id,
-                      //                       title: _titleController.text,
-                      //                       description: _descriptionController.text,
-                      //                       tags: _tags,
-                      //                       videos: planProvider.videoEntries,
-                      //                       timestamp: plan!.timestamp);
-                      //                   await planProvider.updatePlan(updatePlan);
-                      //                   Future.delayed(const Duration(seconds: 1),(){
-                      //                     updatePlan.images = planProvider.finalUploadImages;
-                      //                     planProvider.resetUploadImages();
-                      //                     Navigator.pop(context, updatePlan);
-                      //                   });
-                      //                 },
-                      //               ),
                     ],
                   ),
                 ),

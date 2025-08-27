@@ -1,4 +1,5 @@
 import 'package:bjj_dairy/providers/plan_provider.dart';
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -89,7 +90,7 @@ class _CollectionBottomSheetState extends State<CollectionBottomSheet> {
                     controller: _controller,
                     focusNode: _focusNode,
                     decoration: InputDecoration(
-                      hintText: 'Collection Name',
+                      hintText: AppStrings.collectionNameLabel,
                       border: InputBorder.none,
                       // border: OutlineInputBorder(
                       //   borderRadius: BorderRadius.circular(30),
@@ -118,7 +119,7 @@ class _CollectionBottomSheetState extends State<CollectionBottomSheet> {
                     onPressed: () { Navigator.pop(context);
                     validationProvider.resetAll();
                     },
-                    child: const Text('Cancel'),
+                    child: const Text(AppStrings.cancel),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -139,7 +140,7 @@ class _CollectionBottomSheetState extends State<CollectionBottomSheet> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Apply'),
+                    child: const Text(AppStrings.applyLabel),
                   ),
                 ),
               ],

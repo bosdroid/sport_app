@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:bjj_dairy/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/validation_provider.dart';
+import '../utils/app_strings.dart';
 import '../utils/routes/routes_names.dart';
 import '../widgets/password_text_field.dart';
 
@@ -23,11 +26,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email cannot be empty.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.emailEmptyError)));
       return;
     }
     if (password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Password cannot be empty.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.passwordEmptyError)));
       return;
     }
 
@@ -36,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, RoutesNames.homeScreen);
     } catch (e) {
-      final errorMsg = authProvider.getErrorMessage(e) ?? 'Something went wrong.';
+      final errorMsg = authProvider.getErrorMessage(e) ?? AppStrings.genericError;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
     }
   }
@@ -58,14 +61,14 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('LOGIN',style: TextStyle(color: Theme.of(context).primaryColor,fontSize: 18,fontWeight: FontWeight.bold),),
+                Text(AppStrings.loginTitle,style: TextStyle(color: Theme.of(context).primaryColor,fontSize: 18,fontWeight: FontWeight.bold),),
                 SizedBox(height: 16,),
                 Consumer<ValidationProvider>(
                   builder: (context, validator, child) {
                     return TextFormField(
                       controller: _emailController,
                       decoration: InputDecoration(
-                        labelText: 'Email',
+                        labelText: AppStrings.loginEmailLabel,
                         labelStyle: TextStyle(color: Colors.grey),
                         prefixIcon: Icon(Icons.email, color: Theme.of(context).primaryColor),
                         filled: true,
@@ -110,37 +113,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 PrimaryButton(
                   onPressed: (_emailController.text.isNotEmpty && validationProvider.emailError == null)
                       && (_passwordController.text.isNotEmpty && validationProvider.passwordError == null) ? () => _handleLogin(context, authProvider)
-                    // final email = _emailController.text.trim();
-                    // final password = _passwordController.text.trim();
-                    // if (email.isEmpty) {
-                    //   ScaffoldMessenger.of(context).showSnackBar(
-                    //     SnackBar(content: Text('Email cannot be empty.')),
-                    //   );
-                    //   return;
-                    // }
-                    // if (password.isEmpty) {
-                    //   ScaffoldMessenger.of(context).showSnackBar(
-                    //     SnackBar(content: Text('Password cannot be empty.')),
-                    //   );
-                    //   return;
-                    // }
-                    // try {
-                    //   await authProvider.loginWithEmail(
-                    //    email,
-                    //     password,
-                    //   );
-                    //   if (!context.mounted) return;
-                    //   Navigator.pushReplacementNamed(context, RoutesNames.homeScreen);
-                    // } catch (e) {
-                    //   String error = authProvider.getErrorMessage(e) ?? '';
-                    //   ScaffoldMessenger.of(context).showSnackBar(
-                    //     SnackBar(content: Text(error)),
-                    //   );
-                    // }
                   :null,
-                  text: 'Login with Email',
+                  text: AppStrings.loginWithEmail,
                 ),
                 SizedBox(height: 16),
+                if (Platform.isAndroid)
                 PrimaryButton(
                   onPressed: () async {
                     try {
@@ -148,14 +125,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (!context.mounted) return;
                       Navigator.pushReplacementNamed(context,RoutesNames.homeScreen);
                     } catch (e) {
-                      String error = authProvider.getErrorMessage(e) ?? '';
+                      String error = authProvider.getErrorMessage(e);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(error)),
                       );
                     }
                   },
-                  text: 'Login with Google',
+                  text: AppStrings.loginWithGoogle,
                 ),
+                if (Platform.isIOS)
+                  PrimaryButton(
+                    onPressed: () async {
+                      try {
+                        await authProvider.loginWithApple();
+
+                        if (!context.mounted) return;
+
+                        // Navigate to home if login succeeds
+                        Navigator.pushReplacementNamed(context, RoutesNames.homeScreen);
+                      } catch (e) {
+                        // Use your improved error message handler
+                        final error = authProvider.getAppleLoginErrorMessage(e);
+
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error)),
+                        );
+                      }
+                    },
+                    text: AppStrings.loginWithApple,
+                  ),
                 SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
@@ -163,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacementNamed(context, RoutesNames.signupScreen); // Navigate to SignupScreen
                   },
                   child: Text(
-                    'Don\'t have an account? Sign up',
+                    AppStrings.signupRedirect,
                     style: TextStyle(
                       color: Theme.of(context).primaryColor,
                       fontSize: 14,

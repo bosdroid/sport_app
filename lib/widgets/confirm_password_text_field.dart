@@ -1,3 +1,4 @@
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,7 +27,7 @@ class _ConfirmPasswordTextFieldState extends State<ConfirmPasswordTextField> {
           obscureText: _obscureText,
           onChanged: (value) => validator.validateConfirmPassword(widget.password,value),
           decoration: InputDecoration(
-            labelText: 'Confirm Password',
+            labelText: AppStrings.confirmPasswordLabel,
             labelStyle: TextStyle(color: Colors.grey),
             prefixIcon: Icon(Icons.lock, color: Theme.of(context).primaryColor),
             filled: true,

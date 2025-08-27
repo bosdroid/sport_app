@@ -1,3 +1,4 @@
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 
 import '../model/plan.dart';
@@ -119,7 +120,7 @@ class TechniqueCard extends StatelessWidget {
             if(folderId.isNotEmpty && plan.folderId != folderId && !plan.isShared)
             ...[
              const SizedBox(height: 2,),
-            Text('Since technique is out of the folder user will not see them.',style: TextStyle(color: Colors.red,fontStyle: FontStyle.italic),)
+            Text(AppStrings.outOfFolderWarning,style: TextStyle(color: Colors.red,fontStyle: FontStyle.italic),)
             ]
           ],
         ),

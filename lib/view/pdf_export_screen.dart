@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:bjj_dairy/utils/utils.dart';
 import 'package:bjj_dairy/view/pdf_view_screen.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../model/plan.dart';
 
@@ -54,7 +53,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
 
           widgets.add(
             pw.Text(
-              "Collection: ${widget.collectionName}",
+              "${AppStrings.collection}: ${widget.collectionName}",
               style: pw.TextStyle(
                 fontSize: 24,
                 fontWeight: pw.FontWeight.bold,
@@ -83,7 +82,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
             if (plan.note.isNotEmpty) {
               widgets.add(
                 pw.Text(
-                  "   Note: ${plan.note}",
+                  "   ${AppStrings.noteLabel}: ${plan.note}",
                   style: pw.TextStyle(
                     font: notoFont,
                     fontSize: 16,
@@ -98,7 +97,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
             // "Transition to" heading
             widgets.add(
               pw.Text(
-                "Transition to:",
+                AppStrings.transitionToLabel,
                 style: pw.TextStyle(
                   font: notoFont,
                   fontSize: 18,
@@ -167,7 +166,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
             } else {
               widgets.add(
                 pw.Text(
-                  "-- (no linked positions)",
+                  AppStrings.noTransitionLabel,
                   style: pw.TextStyle(
                     font: notoFont,
                     fontSize: 16,
@@ -293,7 +292,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(iconTheme:IconThemeData(color: Colors.white),title: const Text("Technique Map PDF",style: TextStyle(color: Colors.white),),backgroundColor: Theme.of(context).primaryColor,),
+      appBar: AppBar(iconTheme:IconThemeData(color: Colors.white),title: const Text(AppStrings.pdfExportTitle,style: TextStyle(color: Colors.white),),backgroundColor: Theme.of(context).primaryColor,),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Center(
@@ -311,7 +310,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
                     foregroundColor: Colors.white
                   ),
                   icon: const Icon(Icons.picture_as_pdf),
-                  label: const Text("Open PDF"),
+                  label: const Text(AppStrings.openPdfButton),
                   onPressed: ()=> _openPdf(context),
                 ),
               ),
@@ -324,7 +323,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
                       foregroundColor: Colors.white
                   ),
                   icon: const Icon(Icons.download),
-                  label: const Text("Download PDF"),
+                  label: const Text(AppStrings.downloadPdfButton),
                   onPressed: _downloadPdf,
                 ),
               ),
@@ -337,7 +336,7 @@ class _PdfExportScreenState extends State<PdfExportScreen> {
                       foregroundColor: Colors.white
                   ),
                   icon: const Icon(Icons.share),
-                  label: const Text("Share PDF"),
+                  label: const Text(AppStrings.sharePdfButton),
                   onPressed: _sharePdf,
                 ),
               ),

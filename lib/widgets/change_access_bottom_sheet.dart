@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../model/folder.dart';
 import '../providers/plan_provider.dart';
+import '../utils/app_strings.dart';
 
 class ChangeAccessBottomSheet extends StatefulWidget {
   final Folder collection;
@@ -43,7 +44,7 @@ class _ChangeAccessBottomSheetState extends State<ChangeAccessBottomSheet> {
             children: [
               Expanded(
                 child: const Text(
-                  'Change Access',
+                  AppStrings.changeAccess,
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -57,7 +58,7 @@ class _ChangeAccessBottomSheetState extends State<ChangeAccessBottomSheet> {
            Divider(height: 1,color: Colors.grey.shade300,),
           const SizedBox(height: 12),
           RadioListTile(
-            title: const Text('Private'),
+            title: const Text(AppStrings.private),
             value: 'private',
             groupValue: selectedAccess,
             onChanged: (value) {
@@ -65,7 +66,7 @@ class _ChangeAccessBottomSheetState extends State<ChangeAccessBottomSheet> {
             },
           ),
           RadioListTile(
-            title: const Text('Public'),
+            title: const Text(AppStrings.public),
             value: 'public',
             groupValue: selectedAccess,
             onChanged: (value) {
@@ -127,7 +128,7 @@ class _ChangeAccessBottomSheetState extends State<ChangeAccessBottomSheet> {
             children: [
               Expanded(
                 child: TextButton(
-                  child: const Text('Cancel'),
+                  child: const Text(AppStrings.cancel),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
@@ -138,7 +139,7 @@ class _ChangeAccessBottomSheetState extends State<ChangeAccessBottomSheet> {
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white
                   ),
-                  child: const Text('Update'),
+                  child: const Text(AppStrings.update),
                   onPressed: () async {
                     await widget.planProvider.updateFolderAccess(
                       widget.collection.id!,

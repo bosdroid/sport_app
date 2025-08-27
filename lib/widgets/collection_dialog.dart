@@ -1,3 +1,4 @@
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 
 class CollectionDialog extends StatefulWidget {
@@ -32,14 +33,14 @@ class _CollectionDialogState extends State<CollectionDialog> {
       content: TextField(
         controller: _controller,
         decoration: const InputDecoration(
-          labelText: 'Collection Name',
+          labelText: AppStrings.collectionNameLabel,
           border: OutlineInputBorder(),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text(AppStrings.cancel),
         ),
         ElevatedButton(
           onPressed: () {
@@ -49,7 +50,7 @@ class _CollectionDialogState extends State<CollectionDialog> {
               Navigator.pop(context);
             }
           },
-          child: const Text('Confirm'),
+          child: const Text(AppStrings.confirm),
         ),
       ],
     );

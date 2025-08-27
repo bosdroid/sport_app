@@ -1,4 +1,5 @@
 import 'package:bjj_dairy/model/folder.dart';
+import 'package:bjj_dairy/utils/app_strings.dart';
 import 'package:flutter/material.dart';
 
 class CollectionCard extends StatelessWidget {
@@ -84,7 +85,7 @@ class CollectionCard extends StatelessWidget {
                 // if(count > 0)
                 Expanded(
                   child: Text(
-                    '$count techniques',
+                    '$count ${AppStrings.techniqueLabel}',
                     style: TextStyle(color: Colors.grey[600]),
                     maxLines: 1,
                   ),
