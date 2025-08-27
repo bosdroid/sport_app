@@ -9,10 +9,18 @@ on:
 
 jobs:
   build-upload:
-    runs-on: macos-15   # ⬅️ Xcode 16 / Swift 6
-
+    runs-on: macos-15   # Xcode 16 доступен на этом образе
     steps:
       - uses: actions/checkout@v4
+
+      # ⬇️ ЯВНО выбираем Xcode 16 (с iOS 18 SDK)
+      - name: Select Xcode 16
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16'
+
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Accept Xcode license
         run: sudo xcodebuild -license accept
