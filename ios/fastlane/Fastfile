@@ -10,14 +10,24 @@ platform :ios do
     match(
       type: "appstore",
       readonly: true,
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # опционально; см. примечания
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # опционально, если приватный репо match недоступен по SSH
     )
 
-    # 3) Архивируем и экспортируем IPA для App Store
+    # 3) Архивируем и экспортируем IPA для App Store с ЯВНОЙ настройкой подписи
+    #    - передаем DEVELOPMENT_TEAM
+    #    - разрешаем автоматическое подтягивание профилей
+    #    - указываем профиль от match для bundle id
     build_ios_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
-      export_method: "app-store"
+      export_method: "app-store",
+      xcargs: "-allowProvisioningUpdates DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}",
+      export_options: {
+        signingStyle: "automatic",
+        provisioningProfiles: {
+          "com.drillbox.app" => "match AppStore com.drillbox.app"
+        }
+      }
     )
 
     # 4) Авторизация по API-ключу и загрузка в TestFlight
