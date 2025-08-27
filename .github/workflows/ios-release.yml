@@ -48,7 +48,7 @@ jobs:
           gem install fastlane
           echo "✅ DONE: fastlane installed"
 
-      # Выводим сборку Flutter отдельным шагом — так видно, если упадёт именно здесь
+      # отдельный шаг, чтобы сразу видеть ошибку именно сборки Flutter/Xcode
       - name: Flutter build iOS (no codesign)
         run: |
           set -euo pipefail
