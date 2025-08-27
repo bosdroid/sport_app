@@ -3,11 +3,15 @@ default_platform(:ios)
 platform :ios do
   desc "Build & upload to TestFlight (CI)"
   lane :ci_release do
-    # 1) Flutter build без подписи; номер билда из ENV (берём из GitHub Actions)
+    # 1) Flutter build без подписи; номер билда из ENV (берётся из GitHub Actions)
     sh("cd .. && flutter clean && flutter -v build ios --release --no-codesign --build-number #{ENV['BUILD_NUMBER'] || '1'}")
 
     # 2) Подтягиваем сертификаты/профили из match (read-only)
-    match(type: "appstore", readonly: true)
+    match(
+      type: "appstore",
+      readonly: true,
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # опционально; см. примечания
+    )
 
     # 3) Архивируем и экспортируем IPA для App Store
     build_ios_app(
