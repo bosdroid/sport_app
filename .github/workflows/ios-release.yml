@@ -29,17 +29,13 @@ jobs:
           flutter pub get
           echo "✅ DONE: flutter pub get"
 
-      - name: CocoaPods update (refresh Podfile.lock to latest Firebase)
+      - name: CocoaPods update (pin FirebaseSharedSwift)
         run: |
           set -euo pipefail
           cd ios
-          echo "::group::pod repo update"
           pod repo update --no-ansi
-          echo "::endgroup::"
-          echo "::group::pod update"
-          pod update --no-ansi
-          echo "::endgroup::"
-          echo "✅ DONE: CocoaPods update"
+          pod update FirebaseSharedSwift --no-ansi
+          pod install --no-ansi
 
       - name: Install fastlane
         run: |
