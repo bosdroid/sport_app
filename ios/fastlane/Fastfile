@@ -1,4 +1,4 @@
-opt_out_usage   # отключаем usage-анимации/метрики fastlane
+opt_out_usage   # отключаем usage-метрики fastlane
 
 default_platform(:ios)
 

@@ -9,7 +9,8 @@ on:
 
 jobs:
   build-upload:
-    runs-on: macos-14
+    runs-on: macos-15   # ⬅️ Xcode 16 / Swift 6
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,19 +30,16 @@ jobs:
           flutter pub get
           echo "✅ DONE: flutter pub get"
 
-      - name: CocoaPods update (pin FirebaseSharedSwift + bump Firebase/Database)
+      - name: CocoaPods update (refresh all pods for Xcode 16)
         run: |
           set -euo pipefail
           cd ios
           echo "::group::pod repo update"
           pod repo update --no-ansi
           echo "::endgroup::"
-          # точечно обновляем проблемные pods
-          echo "::group::pod update FirebaseSharedSwift + Firebase/Database"
-          pod update FirebaseSharedSwift Firebase/Database --no-ansi
+          echo "::group::pod update (all)"
+          pod update --no-ansi
           echo "::endgroup::"
-          # синхронизируем установку
-          pod install --no-ansi
           echo "✅ DONE: CocoaPods update"
 
       - name: Install fastlane
