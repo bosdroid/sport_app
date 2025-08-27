@@ -3,20 +3,14 @@ default_platform(:ios)
 platform :ios do
   desc "Build & upload to TestFlight (CI)"
   lane :ci_release do
-    # 1) Flutter build без подписи; номер билда из ENV (берётся из GitHub Actions)
-    sh("cd .. && flutter clean && flutter -v build ios --release --no-codesign --build-number #{ENV['BUILD_NUMBER'] || '1'}")
-
-    # 2) Подтягиваем сертификаты/профили из match (read-only)
+    # 1) ПОДПИСИ из match (репозиторий сертификатов)
     match(
       type: "appstore",
       readonly: true,
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # опционально, если приватный репо match недоступен по SSH
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # опционально, если приватный репо недоступен по SSH
     )
 
-    # 3) Архивируем и экспортируем IPA для App Store с ЯВНОЙ настройкой подписи
-    #    - передаем DEVELOPMENT_TEAM
-    #    - разрешаем автоматическое подтягивание профилей
-    #    - указываем профиль от match для bundle id
+    # 2) Архив + экспорт IPA с явной подписью
     build_ios_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
@@ -30,7 +24,7 @@ platform :ios do
       }
     )
 
-    # 4) Авторизация по API-ключу и загрузка в TestFlight
+    # 3) Авторизация по API-ключу и загрузка в TestFlight
     api_key = app_store_connect_api_key(
       key_id: ENV["ASC_KEY_ID"],
       issuer_id: ENV["ASC_ISSUER_ID"],
