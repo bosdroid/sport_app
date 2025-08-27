@@ -31,6 +31,9 @@ target 'Runner' do
   use_frameworks! :linkage => :static
   use_modular_headers!
 
+  # Fix: pin Swift overlay to Xcode 15-compatible version
+  pod 'FirebaseSharedSwift', '11.15.0'
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
