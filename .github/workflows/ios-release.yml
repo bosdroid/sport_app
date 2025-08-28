@@ -35,7 +35,7 @@ jobs:
           flutter pub get
           echo "DONE: flutter pub get"
 
-      - name: Sanity: can clone match repo?
+      - name: can clone match repo?
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
