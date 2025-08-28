@@ -9,7 +9,8 @@ on:
 
 jobs:
   build-upload:
-    runs-on: macos-15   # Xcode 16 / iOS 18 SDK
+    runs-on: macos-15
+
     steps:
       - uses: actions/checkout@v4
 
@@ -17,9 +18,6 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '16'
-
-      - name: Show Xcode version
-        run: xcodebuild -version
 
       - name: Accept Xcode license
         run: sudo xcodebuild -license accept
@@ -33,11 +31,10 @@ jobs:
       - name: Flutter pub get
         run: |
           set -euo pipefail
-          echo "✅ START: flutter pub get"
+          echo "START: flutter pub get"
           flutter pub get
-          echo "✅ DONE: flutter pub get"
+          echo "DONE: flutter pub get"
 
-      # Быстрая проверка доступа к match-репозиторию
       - name: Sanity: can clone match repo?
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
@@ -45,38 +42,34 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${MATCH_GIT_URL:-}" ] || [ -z "${MATCH_GIT_BASIC_AUTHORIZATION:-}" ]; then
-            echo "❌ MATCH_GIT_URL or MATCH_GIT_BASIC_AUTHORIZATION is empty"
+            echo "MATCH_GIT_URL or MATCH_GIT_BASIC_AUTHORIZATION is empty"
             exit 1
           fi
           git -c credential.helper= -c http.extraheader="Authorization: $MATCH_GIT_BASIC_AUTHORIZATION" ls-remote "$MATCH_GIT_URL" >/dev/null
-          echo "✅ Match repo reachable"
+          echo "Match repo reachable"
 
-      - name: CocoaPods update (refresh all pods for Xcode 16)
+      - name: CocoaPods update
         run: |
           set -euo pipefail
           cd ios
-          echo "::group::pod repo update"
           pod repo update --no-ansi
-          echo "::endgroup::"
-          echo "::group::pod update (all)"
           pod update --no-ansi
-          echo "::endgroup::"
-          echo "✅ DONE: CocoaPods update"
+          echo "DONE: CocoaPods update"
 
       - name: Install fastlane
         run: |
           set -euo pipefail
           cd ios
           gem install fastlane
-          echo "✅ DONE: fastlane installed"
+          echo "DONE: fastlane installed"
 
       - name: Flutter build iOS (no codesign)
         run: |
           set -euo pipefail
-          echo "✅ START: flutter build ios"
+          echo "START: flutter build ios"
           flutter clean
           flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
-          echo "✅ DONE: flutter build ios"
+          echo "DONE: flutter build ios"
 
       - name: Build and upload with fastlane
         env:
@@ -93,7 +86,5 @@ jobs:
         run: |
           set -euo pipefail
           cd ios
-          echo "::group::fastlane ci_release"
           fastlane ci_release
-          echo "::endgroup::"
-          echo "✅ DONE: fastlane ci_release"
+          echo "DONE: fastlane ci_release"
