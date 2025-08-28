@@ -8,10 +8,10 @@ platform :ios do
     UI.header("🔐 1/3 match (certs & profiles)")
     match(
       type: "appstore",
-      readonly: true,
-      git_url: ENV["MATCH_GIT_URL"],                    # HTTPS-URL из секрета
-      git_branch: ENV["MATCH_GIT_BRANCH"] || "main",    # если секрета нет — main
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # "Basic <base64(x-access-token:PAT)>"
+      readonly: false,                                  # ← первый прогон создаст сертификаты/профили
+      git_url: ENV["MATCH_GIT_URL"],                    # https://github.com/bosdroid/ios-certs.git
+      git_branch: ENV["MATCH_GIT_BRANCH"] || "main",
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
     )
     UI.success("✅ match done")
 
