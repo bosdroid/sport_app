@@ -46,7 +46,7 @@ jobs:
             exit 1
           fi
           git -c credential.helper= -c http.extraheader="Authorization: $MATCH_GIT_BASIC_AUTHORIZATION" ls-remote "$MATCH_GIT_URL" >/dev/null
-          echo "Match repo reachable"
+          echo "Match repo reachable!"
 
       - name: CocoaPods update
         run: |
