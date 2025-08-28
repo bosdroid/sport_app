@@ -54,7 +54,7 @@ jobs:
           cd ios
           pod repo update --no-ansi
           pod update --no-ansi
-          echo "DONE: CocoaPods update"
+          echo "DONE!: CocoaPods update"
 
       - name: Install fastlane
         run: |
