@@ -9,7 +9,9 @@ platform :ios do
     match(
       type: "appstore",
       readonly: true,
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # опционально, если приватный репозиторий недоступен по SSH
+      git_url: ENV["MATCH_GIT_URL"],                    # HTTPS-URL из секрета
+      git_branch: ENV["MATCH_GIT_BRANCH"] || "main",    # если секрета нет — main
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"] # "Basic <base64(x-access-token:PAT)>"
     )
     UI.success("✅ match done")
 
