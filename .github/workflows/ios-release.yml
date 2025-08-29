@@ -35,14 +35,16 @@ jobs:
           flutter pub get
           echo "DONE: flutter pub get"
 
+      # 1) Проверяем доступ к приватному репозиторию через GitHub API
       - name: Probe GitHub API with existing header
         shell: bash
         env:
           AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           set -euo pipefail
+          AUTH_CLEAN=$(printf '%s' "$AUTH" | tr -d '\r\n')
           CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-            -H "Authorization: $AUTH" \
+            -H "Authorization: $AUTH_CLEAN" \
             https://api.github.com/repos/bosdroid/ios-certs)
           echo "GitHub API status: $CODE"
           if [ "$CODE" != "200" ]; then
@@ -50,17 +52,35 @@ jobs:
             exit 1
           fi
 
+      # 2) Проверяем git-доступ и автоматически добавляем .git, если забыли
       - name: can clone match repo?
+        shell: bash
         env:
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          RAW_URL: ${{ secrets.MATCH_GIT_URL }}
+          AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           set -euo pipefail
-          if [ -z "${MATCH_GIT_URL:-}" ] || [ -z "${MATCH_GIT_BASIC_AUTHORIZATION:-}" ]; then
+          if [ -z "${RAW_URL:-}" ] || [ -z "${AUTH:-}" ]; then
             echo "MATCH_GIT_URL or MATCH_GIT_BASIC_AUTHORIZATION is empty"
             exit 1
           fi
-          git -c credential.helper= -c http.extraheader="Authorization: $MATCH_GIT_BASIC_AUTHORIZATION" ls-remote "$MATCH_GIT_URL" >/dev/null
+
+          # Убираем перевод строки из заголовка (иногда попадает при копипасте)
+          AUTH_CLEAN=$(printf '%s' "$AUTH" | tr -d '\r\n')
+
+          # Нормализуем URL: добавим .git, если забыли
+          URL_TRIM=$(printf '%s' "$RAW_URL" | tr -d ' ' | tr -d '\r\n')
+          case "$URL_TRIM" in
+            *.git) MATCH_URL="$URL_TRIM" ;;
+            *)     MATCH_URL="${URL_TRIM}.git" ;;
+          esac
+
+          echo "Sanity: URL ends with .git asserted."
+
+          git --version
+          git -c credential.helper= \
+              -c http.extraheader="Authorization: $AUTH_CLEAN" \
+              ls-remote "$MATCH_URL" >/dev/null
           echo "Match repo reachable!"
 
       - name: CocoaPods update
@@ -90,12 +110,12 @@ jobs:
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}   # base64 содержимого .p8
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}       # может быть без .git — Fastfile добавит .git при необходимости
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}     # пароль шифрования match
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-          MATCH_GIT_BRANCH: ${{ secrets.MATCH_GIT_BRANCH }}
+          MATCH_GIT_BRANCH: ${{ secrets.MATCH_GIT_BRANCH }} # опционально; по умолчанию main
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_DISABLE_COLORS: "1"
         run: |

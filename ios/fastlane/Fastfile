@@ -5,13 +5,30 @@ default_platform(:ios)
 platform :ios do
   desc "Build & upload to TestFlight (CI)"
   lane :ci_release do
+    # Используем один и тот же API-ключ App Store Connect для всех шагов
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true
+    )
+
     UI.header("1/3 match (certs & profiles)")
+
+    # Нормализуем URL: если секрет пришел без .git — добавим.
+    git_url = ENV["MATCH_GIT_URL"]
+    if git_url.nil? || git_url.empty?
+      UI.user_error!("MATCH_GIT_URL is empty")
+    end
+    git_url = git_url.end_with?(".git") ? git_url : "#{git_url}.git"
+
     match(
       type: "appstore",
-      readonly: false,                                  # первый прогон создаст репо/профили
-      git_url: ENV["MATCH_GIT_URL"],                    # ОБЯЗАТЕЛЬНО .git на конце
+      readonly: false,                    # первый прогон создаст репо/профили
+      git_url: git_url,                   # ОБЯЗАТЕЛЬНО .git на конце (нормализовано выше)
       git_branch: ENV["MATCH_GIT_BRANCH"] || "main",
-      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+      git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"],
+      api_key: api_key                    # важное дополнение, чтобы не просило Apple ID
     )
     UI.success("match done")
 
@@ -31,12 +48,6 @@ platform :ios do
     UI.success("build_ios_app done")
 
     UI.header("3/3 upload_to_testflight")
-    api_key = app_store_connect_api_key(
-      key_id: ENV["ASC_KEY_ID"],
-      issuer_id: ENV["ASC_ISSUER_ID"],
-      key_content: ENV["ASC_KEY_CONTENT"],
-      is_key_content_base64: true
-    )
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: true
