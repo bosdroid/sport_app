@@ -35,53 +35,25 @@ jobs:
           flutter pub get
           echo "DONE: flutter pub get"
 
-      # 1) Проверяем доступ к приватному репозиторию через GitHub API
-      - name: Probe GitHub API with existing header
+      # ---- SSH для доступа к ios-certs -------------------------------------
+      - name: Setup SSH for match (deploy key)
         shell: bash
         env:
-          AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ deploy key
         run: |
           set -euo pipefail
-          AUTH_CLEAN=$(printf '%s' "$AUTH" | tr -d '\r\n')
-          CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-            -H "Authorization: $AUTH_CLEAN" \
-            https://api.github.com/repos/bosdroid/ios-certs)
-          echo "GitHub API status: $CODE"
-          if [ "$CODE" != "200" ]; then
-            echo "API not reachable (expected 200). Проверь формат 'Basic <base64(username:PAT)>' и scope PAT (repo)."
+          if [ -z "${MATCH_SSH_KEY:-}" ]; then
+            echo "MATCH_SSH_KEY is empty"
             exit 1
           fi
-
-      # 2) Проверяем git-доступ и автоматически добавляем .git, если забыли
-      - name: can clone match repo?
-        shell: bash
-        env:
-          RAW_URL: ${{ secrets.MATCH_GIT_URL }}
-          AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: |
-          set -euo pipefail
-          if [ -z "${RAW_URL:-}" ] || [ -z "${AUTH:-}" ]; then
-            echo "MATCH_GIT_URL or MATCH_GIT_BASIC_AUTHORIZATION is empty"
-            exit 1
-          fi
-
-          # Убираем перевод строки из заголовка (иногда попадает при копипасте)
-          AUTH_CLEAN=$(printf '%s' "$AUTH" | tr -d '\r\n')
-
-          # Нормализуем URL: добавим .git, если забыли
-          URL_TRIM=$(printf '%s' "$RAW_URL" | tr -d ' ' | tr -d '\r\n')
-          case "$URL_TRIM" in
-            *.git) MATCH_URL="$URL_TRIM" ;;
-            *)     MATCH_URL="${URL_TRIM}.git" ;;
-          esac
-
-          echo "Sanity: URL ends with .git asserted."
-
-          git --version
-          git -c credential.helper= \
-              -c http.extraheader="Authorization: $AUTH_CLEAN" \
-              ls-remote "$MATCH_URL" >/dev/null
-          echo "Match repo reachable!"
+          mkdir -p ~/.ssh
+          printf '%s' "$MATCH_SSH_KEY" > ~/.ssh/match_rsa
+          chmod 600 ~/.ssh/match_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          # Проверяем доступ к приватному репозиторию
+          git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
+          echo "SSH access to ios-certs OK"
 
       - name: CocoaPods update
         run: |
@@ -112,14 +84,21 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}   # base64 содержимого .p8
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}       # может быть без .git — Fastfile добавит .git при необходимости
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}     # пароль шифрования match
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_GIT_URL: git@github.com:bosdroid/ios-certs.git
           MATCH_GIT_BRANCH: ${{ secrets.MATCH_GIT_BRANCH }} # опционально; по умолчанию main
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}     # пароль шифрования match
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}       # передадим в fastlane
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_DISABLE_COLORS: "1"
         run: |
           set -euo pipefail
+          # Обеспечим SSH и в этом шаге (новая оболочка)
+          mkdir -p ~/.ssh
+          printf '%s' "$MATCH_SSH_KEY" > ~/.ssh/match_rsa
+          chmod 600 ~/.ssh/match_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+
           cd ios
           fastlane ci_release
           echo "DONE: fastlane ci_release"
