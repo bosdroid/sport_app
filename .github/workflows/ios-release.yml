@@ -91,12 +91,31 @@ jobs:
           flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
           echo "DONE: flutter build ios"
 
-      # Быстрая диагностика Xcode-настроек таргета Runner
-      - name: Sanity — show Xcode build settings
+      # --- ПРЕДДИАГНОСТИКА Xcode: workspace, scheme, настройки ----------------
+      - name: Preflight — verify workspace & scheme & settings
         run: |
           set -euo pipefail
           cd ios
+          echo "== ls ios =="
+          ls -la
+          echo
+          if [ ! -d "Runner.xcworkspace" ]; then
+            echo "Runner.xcworkspace NOT FOUND. Проверь pod install/flutter build ios."
+            exit 1
+          fi
+          echo "== xcodebuild -list (workspace) =="
+          xcodebuild -list -workspace Runner.xcworkspace || true
+          echo
+          echo "== ensure 'Runner' scheme exists and is SHARED =="
+          if ! xcodebuild -list -workspace Runner.xcworkspace | grep -E '^(\s*)Runner$' >/dev/null; then
+            echo "Scheme 'Runner' not found (или не Shared). Открой проект локально и включи 'Shared' у схемы Runner."
+            exit 1
+          fi
+          echo
+          echo "== showBuildSettings (bundle/team/signing) =="
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
+          echo
+          echo "Preflight OK"
 
       - name: Build and upload with fastlane
         env:
