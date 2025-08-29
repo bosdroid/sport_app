@@ -35,6 +35,21 @@ jobs:
           flutter pub get
           echo "DONE: flutter pub get"
 
+      - name: Probe GitHub API with existing header
+        shell: bash
+        env:
+          AUTH: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+          set -euo pipefail
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: $AUTH" \
+            https://api.github.com/repos/bosdroid/ios-certs)
+          echo "GitHub API status: $CODE"
+          if [ "$CODE" != "200" ]; then
+            echo "API not reachable (expected 200). Проверь формат 'Basic <base64(username:PAT)>' и scope PAT (repo)."
+            exit 1
+          fi
+
       - name: can clone match repo?
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}

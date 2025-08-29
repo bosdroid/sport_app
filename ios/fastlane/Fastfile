@@ -8,8 +8,8 @@ platform :ios do
     UI.header("1/3 match (certs & profiles)")
     match(
       type: "appstore",
-      readonly: false,                                  # на первый прогон создаст репо/профили
-      git_url: ENV["MATCH_GIT_URL"],                    # должен оканчиваться на .git
+      readonly: false,                                  # первый прогон создаст репо/профили
+      git_url: ENV["MATCH_GIT_URL"],                    # ОБЯЗАТЕЛЬНО .git на конце
       git_branch: ENV["MATCH_GIT_BRANCH"] || "main",
       git_basic_authorization: ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
     )
