@@ -66,11 +66,15 @@ jobs:
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
+      # ---- CocoaPods: точечный апдейт Firebase/Storage для согласования lock ----
       - name: CocoaPods install
         run: |
           set -euo pipefail
           cd ios
-          pod install --repo-update --no-ansi
+          pod repo update --no-ansi
+          # Обновляем только проблемный pod, чтобы привести Podfile.lock к требуемой версии
+          pod update Firebase/Storage --no-ansi
+          pod install --no-ansi
           echo "DONE!: CocoaPods install"
 
       - name: Install fastlane
@@ -107,10 +111,10 @@ jobs:
           MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}       # тот же секрет
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_DISABLE_COLORS: "1"
-          # Чтобы gym писал подробные логи
           GYM_VERBOSE: "true"
         run: |
           set -euo pipefail
+          # Настроим SSH и в этом шаге (новая оболочка)
           mkdir -p ~/.ssh
           CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
           if printf '%s' "$CLEAN" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
@@ -137,4 +141,3 @@ jobs:
             ~/Library/Logs/scan/**/*
             ~/Library/Logs/fastlane/**/*
             ios/build/**/*
-
