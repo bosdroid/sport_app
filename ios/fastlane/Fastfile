@@ -23,7 +23,7 @@ platform :ios do
       readonly: false,                                 # первый прогон создаст сертификаты/профили
       git_url: git_url,                                # SSH-URL
       git_branch: ENV["MATCH_GIT_BRANCH"] || "main",
-      git_private_key: ENV["MATCH_SSH_KEY"],           # содержимое приватного ключа deploy key
+      git_private_key: ENV["MATCH_SSH_KEY"],           # содержимое приватного ключа deploy key (тот же секрет)
       api_key: api_key
     )
     UI.success("match done")

@@ -39,19 +39,45 @@ jobs:
       - name: Setup SSH for match (deploy key)
         shell: bash
         env:
-          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ deploy key
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ (сырой OpenSSH ИЛИ base64)
         run: |
           set -euo pipefail
           if [ -z "${MATCH_SSH_KEY:-}" ]; then
             echo "MATCH_SSH_KEY is empty"
             exit 1
           fi
+
           mkdir -p ~/.ssh
-          printf '%s' "$MATCH_SSH_KEY" > ~/.ssh/match_rsa
+
+          # Нормализуем секрет:
+          # - убираем возможные \r
+          # - если это base64 (нет строки BEGIN), декодируем
+          # - иначе считаем, что это сырой приватный ключ OpenSSH
+          CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
+          if printf '%s' "$CLEAN" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
+            printf '%s\n' "$CLEAN" > ~/.ssh/match_rsa
+          else
+            # Пытаемся декодировать как base64 -> OpenSSH приватный ключ
+            printf '%s' "$CLEAN" | base64 -d > ~/.ssh/match_rsa || {
+              echo "MATCH_SSH_KEY is neither OpenSSH private key nor valid base64"
+              exit 1
+            }
+          fi
+
           chmod 600 ~/.ssh/match_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+          # Проверим, что файл действительно приватный ключ: извлечём публичную часть
+          if ! ssh-keygen -y -f ~/.ssh/match_rsa >/dev/null 2>&1; then
+            echo "Invalid private key format in MATCH_SSH_KEY (cannot parse with ssh-keygen)."
+            echo "Make sure the secret contains the FULL OpenSSH private key (BEGIN/END) or base64 of it."
+            exit 1
+          fi
+
+          # known_hosts + переменная окружения для git/ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
-          # Проверяем доступ к приватному репозиторию
+
+          # Проверяем доступ к приватному репозиторию через SSH
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
@@ -87,16 +113,21 @@ jobs:
           MATCH_GIT_URL: git@github.com:bosdroid/ios-certs.git
           MATCH_GIT_BRANCH: ${{ secrets.MATCH_GIT_BRANCH }} # опционально; по умолчанию main
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}     # пароль шифрования match
-          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}       # передадим в fastlane
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}       # используем тот же секрет
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_DISABLE_COLORS: "1"
         run: |
           set -euo pipefail
-          # Обеспечим SSH и в этом шаге (новая оболочка)
+          # Настроим SSH и в этом шаге (новая оболочка)
           mkdir -p ~/.ssh
-          printf '%s' "$MATCH_SSH_KEY" > ~/.ssh/match_rsa
+          CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
+          if printf '%s' "$CLEAN" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
+            printf '%s\n' "$CLEAN" > ~/.ssh/match_rsa
+          else
+            printf '%s' "$CLEAN" | base64 -d > ~/.ssh/match_rsa
+          fi
           chmod 600 ~/.ssh/match_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
           cd ios
