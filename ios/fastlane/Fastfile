@@ -29,12 +29,6 @@ platform :ios do
     UI.success("match done")
 
     UI.header("2/3 build_ios_app (archive & export)")
-
-    # Полезно убедиться, что проект в автоматическом кодсайнинге и с той же командой
-    # (если нужно, раскомментируйте две строки ниже один раз)
-    # update_project_team(teamid: ENV["APPLE_TEAM_ID"])
-    # update_code_signing_settings(use_automatic_signing: true, path: "Runner.xcodeproj")
-
     build_ios_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
@@ -45,7 +39,8 @@ platform :ios do
         provisioningProfiles: {
           "com.drillbox.app" => "match AppStore com.drillbox.app"
         }
-      }
+      },
+      disable_xcpretty: true # печатаем сырой xcodebuild-лог в консоль
     )
     UI.success("build_ios_app done")
 

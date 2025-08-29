@@ -72,7 +72,6 @@ jobs:
           set -euo pipefail
           cd ios
           pod repo update --no-ansi
-          # Обновляем только проблемный pod, чтобы привести Podfile.lock к требуемой версии
           pod update Firebase/Storage --no-ansi
           pod install --no-ansi
           echo "DONE!: CocoaPods install"
@@ -113,8 +112,8 @@ jobs:
           FASTLANE_DISABLE_COLORS: "1"
           GYM_VERBOSE: "true"
         run: |
+          # Важно: печатаем хвост gym-лога при падении
           set -euo pipefail
-          # Настроим SSH и в этом шаге (новая оболочка)
           mkdir -p ~/.ssh
           CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
           if printf '%s' "$CLEAN" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
@@ -127,7 +126,23 @@ jobs:
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
           cd ios
+
+          set +e
           fastlane ci_release
+          STATUS=$?
+          set -e
+
+          if [ $STATUS -ne 0 ]; then
+            echo "===== Tail of latest gym log ====="
+            LATEST_LOG=$(ls -t ~/Library/Logs/gym/*/*.log 2>/dev/null | head -n1 || true)
+            if [ -n "${LATEST_LOG:-}" ] && [ -f "$LATEST_LOG" ]; then
+              tail -n 400 "$LATEST_LOG" || true
+            else
+              echo "No gym log found at ~/Library/Logs/gym"
+            fi
+            exit $STATUS
+          fi
+
           echo "DONE: fastlane ci_release"
 
       # --- Автосбор логов при падении ---------------------------------------
