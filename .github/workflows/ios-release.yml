@@ -39,55 +39,39 @@ jobs:
       - name: Setup SSH for match (deploy key)
         shell: bash
         env:
-          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ (сырой OpenSSH ИЛИ base64)
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ (OpenSSH или base64 от него)
         run: |
           set -euo pipefail
           if [ -z "${MATCH_SSH_KEY:-}" ]; then
             echo "MATCH_SSH_KEY is empty"
             exit 1
           fi
-
           mkdir -p ~/.ssh
-
-          # Нормализуем секрет:
-          # - убираем возможные \r
-          # - если это base64 (нет строки BEGIN), декодируем
-          # - иначе считаем, что это сырой приватный ключ OpenSSH
           CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
           if printf '%s' "$CLEAN" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
             printf '%s\n' "$CLEAN" > ~/.ssh/match_rsa
           else
-            # Пытаемся декодировать как base64 -> OpenSSH приватный ключ
             printf '%s' "$CLEAN" | base64 -d > ~/.ssh/match_rsa || {
               echo "MATCH_SSH_KEY is neither OpenSSH private key nor valid base64"
               exit 1
             }
           fi
-
           chmod 600 ~/.ssh/match_rsa
-
-          # Проверим, что файл действительно приватный ключ: извлечём публичную часть
           if ! ssh-keygen -y -f ~/.ssh/match_rsa >/dev/null 2>&1; then
-            echo "Invalid private key format in MATCH_SSH_KEY (cannot parse with ssh-keygen)."
-            echo "Make sure the secret contains the FULL OpenSSH private key (BEGIN/END) or base64 of it."
+            echo "Invalid private key format in MATCH_SSH_KEY"
             exit 1
           fi
-
-          # known_hosts + переменная окружения для git/ssh
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
-
-          # Проверяем доступ к приватному репозиторию через SSH
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
-      - name: CocoaPods update
+      - name: CocoaPods install
         run: |
           set -euo pipefail
           cd ios
-          pod repo update --no-ansi
-          pod update --no-ansi
-          echo "DONE!: CocoaPods update"
+          pod install --repo-update --no-ansi
+          echo "DONE!: CocoaPods install"
 
       - name: Install fastlane
         run: |
@@ -104,6 +88,13 @@ jobs:
           flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
           echo "DONE: flutter build ios"
 
+      # Быстрая диагностика Xcode-настроек таргета Runner
+      - name: Sanity — show Xcode build settings
+        run: |
+          set -euo pipefail
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
+
       - name: Build and upload with fastlane
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -113,12 +104,13 @@ jobs:
           MATCH_GIT_URL: git@github.com:bosdroid/ios-certs.git
           MATCH_GIT_BRANCH: ${{ secrets.MATCH_GIT_BRANCH }} # опционально; по умолчанию main
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}     # пароль шифрования match
-          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}       # используем тот же секрет
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}       # тот же секрет
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_DISABLE_COLORS: "1"
+          # Чтобы gym писал подробные логи
+          GYM_VERBOSE: "true"
         run: |
           set -euo pipefail
-          # Настроим SSH и в этом шаге (новая оболочка)
           mkdir -p ~/.ssh
           CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
           if printf '%s' "$CLEAN" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
@@ -133,3 +125,16 @@ jobs:
           cd ios
           fastlane ci_release
           echo "DONE: fastlane ci_release"
+
+      # --- Автосбор логов при падении ---------------------------------------
+      - name: Upload build logs (gym/scan/fastlane)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-fastlane-logs
+          path: |
+            ~/Library/Logs/gym/**/*
+            ~/Library/Logs/scan/**/*
+            ~/Library/Logs/fastlane/**/*
+            ios/build/**/*
+
