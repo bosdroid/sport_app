@@ -66,13 +66,12 @@ jobs:
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
-      # ---- CocoaPods (на случай устаревшего lock по Firebase/Storage) -------
+      # ---- CocoaPods --------------------------------------------------------
       - name: CocoaPods install
         run: |
           set -euo pipefail
           cd ios
           pod repo update --no-ansi
-          # если будет конфликт как раньше — подтянет нужную 11.15.0
           pod update Firebase/Storage --no-ansi || true
           pod install --no-ansi
           echo "DONE: CocoaPods install"
@@ -84,7 +83,7 @@ jobs:
           gem install fastlane
           echo "DONE: fastlane installed"
 
-      # === ВАЖНО: фиксируем bundle id и team прямо в проекте до любых проверок
+      # === ВАЖНО: жёстко проставляем bundle id и team в проекте
       - name: Fastlane fix identifiers (bundle id & team)
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -106,9 +105,10 @@ jobs:
           echo "== Available schemes =="
           xcodebuild -list -workspace Runner.xcworkspace || true
           echo
-          echo "== Key build settings =="
+          echo "== Key build settings (grep) =="
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
 
+      # --- Жёсткая проверка по Info.plist (а не по showBuildSettings)
       - name: Assert expected identifiers
         env:
           EXPECTED_BUNDLE_ID: com.drillbox.app
@@ -116,10 +116,11 @@ jobs:
         run: |
           set -euo pipefail
           cd ios
-          BID=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/PRODUCT_BUNDLE_IDENTIFIER[ ]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
-          TEAM=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/DEVELOPMENT_TEAM[ ]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
-          echo "Detected: PRODUCT_BUNDLE_IDENTIFIER=$BID, DEVELOPMENT_TEAM=$TEAM"
-          test "$BID" = "$EXPECTED_BUNDLE_ID" || { echo "Bundle id mismatch! Expected $EXPECTED_BUNDLE_ID"; exit 1; }
+          BID_PLIST=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "Runner/Info.plist")
+          echo "Info.plist CFBundleIdentifier=$BID_PLIST"
+          TEAM=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
+          echo "Detected DEVELOPMENT_TEAM=$TEAM"
+          test "$BID_PLIST" = "$EXPECTED_BUNDLE_ID" || { echo "Bundle id mismatch! Expected $EXPECTED_BUNDLE_ID"; exit 1; }
           test "$TEAM" = "$EXPECTED_TEAM_ID" || { echo "Team id mismatch! Expected $EXPECTED_TEAM_ID"; exit 1; }
           echo "Identifiers OK"
 

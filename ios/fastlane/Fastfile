@@ -3,16 +3,24 @@ opt_out_usage
 default_platform(:ios)
 
 platform :ios do
-  # Проставляем правильный bundle id и team прямо в проект
+  # Жёстко проставляем bundle id в Info.plist и проект, и включаем auto-signing
   desc "Fix bundle id and team in Xcode project"
   lane :fix_ids do
-    # У update_app_identifier нет параметра `targets`
+    # 1) В Info.plist ставим CFBundleIdentifier = com.drillbox.app
+    update_info_plist(
+      plist_path: "Runner/Info.plist",
+      key: "CFBundleIdentifier",
+      value: "com.drillbox.app"
+    )
+
+    # 2) В проект (build settings) ставим тот же bundle id
     update_app_identifier(
       xcodeproj: "Runner.xcodeproj",
       plist_path: "Runner/Info.plist",
       app_identifier: "com.drillbox.app"
     )
-    # Эти действия поддерживают `targets`
+
+    # 3) Правильная команда и автоматический кодсайн на таргетах
     update_project_team(
       teamid: ENV["APPLE_TEAM_ID"],
       targets: ["Runner", "RunnerTests"]
@@ -48,7 +56,7 @@ platform :ios do
     )
     UI.success("match done")
 
-    # На всякий случай ещё раз применим правильную команду и авто-сайнинг
+    # Доп. страховка: снова включим нужный team и auto-signing
     update_project_team(
       teamid: ENV["APPLE_TEAM_ID"],
       targets: ["Runner", "RunnerTests"]
@@ -93,7 +101,6 @@ platform :ios do
       key_content: ENV["ASC_KEY_CONTENT"],
       is_key_content_base64: true
     )
-
     version = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleShortVersionString")
     build_in_plist = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleVersion")
     UI.message("Project Info.plist -> version=#{version} build=#{build_in_plist}")
