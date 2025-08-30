@@ -108,7 +108,7 @@ jobs:
           echo
           echo "== ensure 'Runner' scheme exists and is SHARED =="
           if ! xcodebuild -list -workspace Runner.xcworkspace | grep -E '^(\s*)Runner$' >/dev/null; then
-            echo "Scheme 'Runner' not found (или не Shared). Открой проект локально и включи 'Shared' у схемы Runner."
+            echo "Scheme 'Runner' not found (или не Shared). Расшарь схему Runner в Xcode."
             exit 1
           fi
           echo
@@ -116,6 +116,31 @@ jobs:
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
           echo
           echo "Preflight OK"
+
+      # --- СЫРАЯ сборка без кодсайна, чтобы увидеть compile/link ошибки ------
+      - name: Preflight — xcodebuild compile (CODE_SIGNING_ALLOWED=NO)
+        run: |
+          set -euo pipefail
+          cd ios
+          LOG=../xcodebuild-preflight.log
+          set +e
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            build \
+            | tee "$LOG"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ $STATUS -ne 0 ]; then
+            echo "===== Tail of preflight xcodebuild log ====="
+            tail -n 400 "$LOG" || true
+            exit $STATUS
+          fi
+          echo "Preflight compile OK"
 
       - name: Build and upload with fastlane
         env:
@@ -131,7 +156,7 @@ jobs:
           FASTLANE_DISABLE_COLORS: "1"
           GYM_VERBOSE: "true"
         run: |
-          # Важно: печатаем хвост gym-лога при падении
+          # Печатаем хвост gym-лога при падении
           set -euo pipefail
           mkdir -p ~/.ssh
           CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
@@ -165,13 +190,14 @@ jobs:
           echo "DONE: fastlane ci_release"
 
       # --- Автосбор логов при падении ---------------------------------------
-      - name: Upload build logs (gym/scan/fastlane)
+      - name: Upload build logs (gym/scan/fastlane + preflight)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: xcode-fastlane-logs
+          name: xcode-logs
           path: |
             ~/Library/Logs/gym/**/*
             ~/Library/Logs/scan/**/*
             ~/Library/Logs/fastlane/**/*
             ios/build/**/*
+            xcodebuild-preflight.log
