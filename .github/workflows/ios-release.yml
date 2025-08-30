@@ -39,7 +39,7 @@ jobs:
       - name: Setup SSH for match (deploy key)
         shell: bash
         env:
-          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ (OpenSSH или base64 от него)
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ (OpenSSH или base64)
         run: |
           set -euo pipefail
           if [ -z "${MATCH_SSH_KEY:-}" ]; then
@@ -117,7 +117,4 @@ jobs:
           echo
           echo "Preflight OK"
 
-      # --- !СЫРАЯ сборка без кодсайна (полностью отключаем требования профилей) ---
-      - name: Preflight — xcodebuild compile (no signing)
-        run: |
-          set -euo pipefail
+      # --- СЫРАЯ сборка без кодсайна (чтобы ловить compile/link) ---
