@@ -7,8 +7,8 @@ platform :ios do
   desc "Fix bundle id and team in Xcode project"
   lane :fix_ids do
     # 1) В Info.plist ставим CFBundleIdentifier = com.drillbox.app
-    update_info_plist(
-      plist_path: "Runner/Info.plist",
+    set_info_plist_value(
+      path: "Runner/Info.plist",
       key: "CFBundleIdentifier",
       value: "com.drillbox.app"
     )
@@ -20,7 +20,7 @@ platform :ios do
       app_identifier: "com.drillbox.app"
     )
 
-    # 3) Правильная команда и автоматический кодсайн на таргетах
+    # 3) Правильная команда и автоматический кодсайн на таргете(ах)
     update_project_team(
       teamid: ENV["APPLE_TEAM_ID"],
       targets: ["Runner", "RunnerTests"]

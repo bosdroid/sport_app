@@ -83,7 +83,7 @@ jobs:
           gem install fastlane
           echo "DONE: fastlane installed"
 
-      # === ВАЖНО: жёстко проставляем bundle id и team в проекте
+      # === Жёстко проставляем bundle id и team ДО любых проверок
       - name: Fastlane fix identifiers (bundle id & team)
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -108,7 +108,7 @@ jobs:
           echo "== Key build settings (grep) =="
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
 
-      # --- Жёсткая проверка по Info.plist (а не по showBuildSettings)
+      # --- Проверяем по Info.plist (а не по showBuildSettings)
       - name: Assert expected identifiers
         env:
           EXPECTED_BUNDLE_ID: com.drillbox.app
