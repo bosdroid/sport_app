@@ -66,15 +66,14 @@ jobs:
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
-      # ---- CocoaPods: точечный апдейт Firebase/Storage для согласования lock ----
+      # ---- CocoaPods --------------------------------------------------------
       - name: CocoaPods install
         run: |
           set -euo pipefail
           cd ios
           pod repo update --no-ansi
-          pod update Firebase/Storage --no-ansi
           pod install --no-ansi
-          echo "DONE!: CocoaPods install"
+          echo "DONE: CocoaPods install"
 
       - name: Install fastlane
         run: |
@@ -91,30 +90,102 @@ jobs:
           flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
           echo "DONE: flutter build ios"
 
-      # --- ПРЕДДИАГНОСТИКА Xcode: workspace, scheme, настройки ----------------
-      - name: Preflight — verify workspace & scheme & settings
+      # --- Преддиагностика Xcode --------------------------------------------
+      - name: Preflight — verify workspace and settings
         run: |
           set -euo pipefail
           cd ios
-          echo "== ls ios =="
-          ls -la
-          echo
           if [ ! -d "Runner.xcworkspace" ]; then
-            echo "Runner.xcworkspace NOT FOUND. Проверь pod install/flutter build ios."
+            echo "Runner.xcworkspace NOT FOUND"
             exit 1
           fi
-          echo "== xcodebuild -list (workspace) =="
+          echo "== Available schemes =="
           xcodebuild -list -workspace Runner.xcworkspace || true
           echo
-          echo "== ensure 'Runner' scheme exists and is SHARED =="
-          if ! xcodebuild -list -workspace Runner.xcworkspace | grep -E '^(\s*)Runner$' >/dev/null; then
-            echo "Scheme 'Runner' not found (или не Shared). Расшарь схему Runner в Xcode."
-            exit 1
-          fi
-          echo
-          echo "== showBuildSettings (bundle/team/signing) =="
+          echo "== Key build settings =="
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
-          echo
-          echo "Preflight OK"
 
-      # --- СЫРАЯ сборка без кодсайна (чтобы ловить compile/link) ---
+      - name: Assert expected identifiers
+        env:
+          EXPECTED_BUNDLE_ID: com.drillbox.app
+          EXPECTED_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          cd ios
+          BID=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/PRODUCT_BUNDLE_IDENTIFIER/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
+          TEAM=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/DEVELOPMENT_TEAM/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
+          echo "Detected: PRODUCT_BUNDLE_IDENTIFIER=$BID, DEVELOPMENT_TEAM=$TEAM"
+          test "$BID" = "$EXPECTED_BUNDLE_ID" || { echo "Bundle id mismatch! Expected $EXPECTED_BUNDLE_ID"; exit 1; }
+          test "$TEAM" = "$EXPECTED_TEAM_ID" || { echo "Team id mismatch! Expected $EXPECTED_TEAM_ID"; exit 1; }
+          echo "Identifiers OK"
+
+      - name: Preflight compile (no signing)
+        run: |
+          set -euo pipefail
+          cd ios
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_STYLE=Automatic \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            PROVISIONING_PROFILE="" \
+            build
+
+      - name: Build and upload with fastlane
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}   # base64 p8
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: git@github.com:bosdroid/ios-certs.git
+          MATCH_GIT_BRANCH: ${{ secrets.MATCH_GIT_BRANCH }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_DISABLE_COLORS: "1"
+          GYM_VERBOSE: "true"
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          CLEAN=$(printf '%s' "$MATCH_SSH_KEY" | tr -d '\r')
+          if printf '%s' "$CLEAN" | grep -q "BEGIN OPENSSH PRIVATE KEY"; then
+            printf '%s\n' "$CLEAN" > ~/.ssh/match_rsa
+          else
+            printf '%s' "$CLEAN" | base64 -d > ~/.ssh/match_rsa
+          fi
+          chmod 600 ~/.ssh/match_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+
+          cd ios
+          fastlane ci_release
+          echo "DONE: fastlane ci_release"
+
+      # --- Проверка TestFlight одной командой fastlane -----------------------
+      - name: Verify TestFlight (latest build number)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+        run: |
+          set -euo pipefail
+          cd ios
+          fastlane verify_tf
+
+      # --- Артефакты ---------------------------------------------------------
+      - name: Upload artifacts (IPA and logs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa-and-logs
+          path: |
+            ios/*.ipa
+            ~/Library/Logs/gym/**/*
+            ~/Library/Logs/scan/**/*
+            ~/Library/Logs/fastlane/**/*
+            ~/Library/Logs/Transporter/**/*
