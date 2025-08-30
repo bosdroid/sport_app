@@ -117,7 +117,7 @@ jobs:
           echo
           echo "Preflight OK"
 
-      # --- СЫРАЯ сборка без кодсайна (полностью отключаем требования профилей) ---
+      # --- !СЫРАЯ сборка без кодсайна (полностью отключаем требования профилей) ---
       - name: Preflight — xcodebuild compile (no signing)
         run: |
           set -euo pipefail
