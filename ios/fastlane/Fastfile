@@ -3,9 +3,29 @@ opt_out_usage
 default_platform(:ios)
 
 platform :ios do
+  # Проставляем правильный bundle id и team прямо в проект
+  desc "Fix bundle id and team in Xcode project"
+  lane :fix_ids do
+    update_app_identifier(
+      xcodeproj: "Runner.xcodeproj",
+      plist_path: "Runner/Info.plist",
+      app_identifier: "com.drillbox.app",
+      targets: ["Runner"]
+    )
+    update_project_team(
+      teamid: ENV["APPLE_TEAM_ID"],
+      targets: ["Runner", "RunnerTests"]
+    )
+    update_code_signing_settings(
+      use_automatic_signing: true,
+      path: "Runner.xcodeproj",
+      targets: ["Runner", "RunnerTests"],
+      team_id: ENV["APPLE_TEAM_ID"]
+    )
+  end
+
   desc "Build & upload to TestFlight (CI)"
   lane :ci_release do
-    # Один API-ключ для всех взаимодействий с App Store Connect
     api_key = app_store_connect_api_key(
       key_id: ENV["ASC_KEY_ID"],
       issuer_id: ENV["ASC_ISSUER_ID"],
@@ -14,22 +34,20 @@ platform :ios do
     )
 
     UI.header("1/3 match (certs & profiles)")
-
     git_url = ENV["MATCH_GIT_URL"]
-    git_url = "git@github.com:bosdroid/ios-certs.git" if git_url.nil? || git_url.empty?
+    git_url = "git@github.com:bosdroid/ios-certs.git" if git_url.to_s.empty?
 
     match(
       type: "appstore",
-      readonly: false,                                 # первый прогон создаст сертификаты/профили
-      git_url: git_url,                                # SSH-URL
+      readonly: false,
+      git_url: git_url,
       git_branch: ENV["MATCH_GIT_BRANCH"] || "main",
-      git_private_key: ENV["MATCH_SSH_KEY"],           # содержимое приватного ключа deploy key
+      git_private_key: ENV["MATCH_SSH_KEY"],
       api_key: api_key
     )
     UI.success("match done")
 
-    # ВАЖНО: насильно включаем автоматический кодсайн у проекта/таргетов,
-    # и ставим правильную команду (TEAM)
+    # На всякий случай ещё раз применим фиксы идентификаторов
     update_project_team(
       teamid: ENV["APPLE_TEAM_ID"],
       targets: ["Runner", "RunnerTests"]
@@ -46,24 +64,44 @@ platform :ios do
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
-      # В xcargs дополнительно чистим ручные указания профилей, если они остались в проекте
       xcargs: %Q[-allowProvisioningUpdates DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Automatic PROVISIONING_PROFILE_SPECIFIER="" PROVISIONING_PROFILE=""],
       export_options: {
         signingStyle: "automatic",
         provisioningProfiles: {
-          # Если bundle id другой — замени ключ на фактический bundle id из проекта
           "com.drillbox.app" => "match AppStore com.drillbox.app"
         }
       },
-      disable_xcpretty: true # печатаем сырой xcodebuild-лог в консоль
+      disable_xcpretty: true
     )
     UI.success("build_ios_app done")
 
     UI.header("3/3 upload_to_testflight")
     upload_to_testflight(
       api_key: api_key,
-      skip_waiting_for_build_processing: true
+      skip_waiting_for_build_processing: true,
+      verbose: true
     )
     UI.success("upload_to_testflight done")
+  end
+
+  desc "Verify TestFlight visibility (prints latest build number)"
+  lane :verify_tf do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT"],
+      is_key_content_base64: true
+    )
+    version = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleShortVersionString")
+    build_in_plist = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleVersion")
+    UI.message("Project Info.plist -> version=#{version} build=#{build_in_plist}")
+
+    latest = latest_testflight_build_number(
+      app_identifier: "com.drillbox.app",
+      version: version,
+      api_key: api_key,
+      platform: "ios"
+    )
+    UI.success("TestFlight latest build for #{version}: #{latest}")
   end
 end

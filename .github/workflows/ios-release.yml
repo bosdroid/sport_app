@@ -66,18 +66,16 @@ jobs:
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
-      # ---- CocoaPods (фикс версии Firebase/Storage) -------------------------
+      # ---- CocoaPods (на случай устаревшего lock по Firebase/Storage) -------
       - name: CocoaPods install
         run: |
           set -euo pipefail
           cd ios
-          # обновляем индексы spec репозиториев
           pod repo update --no-ansi
-          # точечно подтягиваем нужную версию Firebase/Storage в lock-файл
-          pod update Firebase/Storage --no-ansi
-          # ставим зависимости
+          # если будет конфликт как раньше — подтянет нужную 11.15.0
+          pod update Firebase/Storage --no-ansi || true
           pod install --no-ansi
-          echo "DONE: CocoaPods install (Firebase/Storage updated)"
+          echo "DONE: CocoaPods install"
 
       - name: Install fastlane
         run: |
@@ -86,13 +84,15 @@ jobs:
           gem install fastlane
           echo "DONE: fastlane installed"
 
-      - name: Flutter build iOS (no codesign)
+      # === ВАЖНО: фиксируем bundle id и team прямо в проекте до любых проверок
+      - name: Fastlane fix identifiers (bundle id & team)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          echo "START: flutter build ios"
-          flutter clean
-          flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
-          echo "DONE: flutter build ios"
+          cd ios
+          fastlane fix_ids
+          echo "DONE: identifiers fixed"
 
       # --- Преддиагностика Xcode --------------------------------------------
       - name: Preflight — verify workspace and settings
@@ -116,8 +116,8 @@ jobs:
         run: |
           set -euo pipefail
           cd ios
-          BID=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/PRODUCT_BUNDLE_IDENTIFIER/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
-          TEAM=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/DEVELOPMENT_TEAM/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
+          BID=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/PRODUCT_BUNDLE_IDENTIFIER[ ]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
+          TEAM=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/DEVELOPMENT_TEAM[ ]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
           echo "Detected: PRODUCT_BUNDLE_IDENTIFIER=$BID, DEVELOPMENT_TEAM=$TEAM"
           test "$BID" = "$EXPECTED_BUNDLE_ID" || { echo "Bundle id mismatch! Expected $EXPECTED_BUNDLE_ID"; exit 1; }
           test "$TEAM" = "$EXPECTED_TEAM_ID" || { echo "Team id mismatch! Expected $EXPECTED_TEAM_ID"; exit 1; }
@@ -139,6 +139,14 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="" \
             PROVISIONING_PROFILE="" \
             build
+
+      - name: Flutter build iOS (no codesign)
+        run: |
+          set -euo pipefail
+          echo "START: flutter build ios"
+          flutter clean
+          flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
+          echo "DONE: flutter build ios"
 
       - name: Build and upload with fastlane
         env:
@@ -170,7 +178,6 @@ jobs:
           fastlane ci_release
           echo "DONE: fastlane ci_release"
 
-      # --- Проверка TestFlight одной командой fastlane (lane verify_tf) ------
       - name: Verify TestFlight (latest build number)
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -181,7 +188,6 @@ jobs:
           cd ios
           fastlane verify_tf
 
-      # --- Артефакты ---------------------------------------------------------
       - name: Upload artifacts (IPA and logs)
         if: always()
         uses: actions/upload-artifact@v4
