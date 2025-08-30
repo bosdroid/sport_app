@@ -28,15 +28,30 @@ platform :ios do
     )
     UI.success("match done")
 
+    # ВАЖНО: насильно включаем автоматический кодсайн у проекта/таргетов,
+    # и ставим правильную команду (TEAM)
+    update_project_team(
+      teamid: ENV["APPLE_TEAM_ID"],
+      targets: ["Runner", "RunnerTests"]
+    )
+    update_code_signing_settings(
+      use_automatic_signing: true,
+      path: "Runner.xcodeproj",
+      targets: ["Runner", "RunnerTests"],
+      team_id: ENV["APPLE_TEAM_ID"]
+    )
+
     UI.header("2/3 build_ios_app (archive & export)")
     build_ios_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
-      xcargs: "-allowProvisioningUpdates DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}",
+      # В xcargs дополнительно чистим ручные указания профилей, если они остались в проекте
+      xcargs: %Q[-allowProvisioningUpdates DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Automatic PROVISIONING_PROFILE_SPECIFIER="" PROVISIONING_PROFILE=""],
       export_options: {
         signingStyle: "automatic",
         provisioningProfiles: {
+          # Если bundle id другой — замени ключ на фактический bundle id из проекта
           "com.drillbox.app" => "match AppStore com.drillbox.app"
         }
       },
