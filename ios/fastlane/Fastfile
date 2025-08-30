@@ -6,12 +6,13 @@ platform :ios do
   # Проставляем правильный bundle id и team прямо в проект
   desc "Fix bundle id and team in Xcode project"
   lane :fix_ids do
+    # У update_app_identifier нет параметра `targets`
     update_app_identifier(
       xcodeproj: "Runner.xcodeproj",
       plist_path: "Runner/Info.plist",
-      app_identifier: "com.drillbox.app",
-      targets: ["Runner"]
+      app_identifier: "com.drillbox.app"
     )
+    # Эти действия поддерживают `targets`
     update_project_team(
       teamid: ENV["APPLE_TEAM_ID"],
       targets: ["Runner", "RunnerTests"]
@@ -47,7 +48,7 @@ platform :ios do
     )
     UI.success("match done")
 
-    # На всякий случай ещё раз применим фиксы идентификаторов
+    # На всякий случай ещё раз применим правильную команду и авто-сайнинг
     update_project_team(
       teamid: ENV["APPLE_TEAM_ID"],
       targets: ["Runner", "RunnerTests"]
@@ -92,6 +93,7 @@ platform :ios do
       key_content: ENV["ASC_KEY_CONTENT"],
       is_key_content_base64: true
     )
+
     version = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleShortVersionString")
     build_in_plist = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleVersion")
     UI.message("Project Info.plist -> version=#{version} build=#{build_in_plist}")
