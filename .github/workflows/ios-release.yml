@@ -66,14 +66,18 @@ jobs:
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
-      # ---- CocoaPods --------------------------------------------------------
+      # ---- CocoaPods (фикс версии Firebase/Storage) -------------------------
       - name: CocoaPods install
         run: |
           set -euo pipefail
           cd ios
+          # обновляем индексы spec репозиториев
           pod repo update --no-ansi
+          # точечно подтягиваем нужную версию Firebase/Storage в lock-файл
+          pod update Firebase/Storage --no-ansi
+          # ставим зависимости
           pod install --no-ansi
-          echo "DONE: CocoaPods install"
+          echo "DONE: CocoaPods install (Firebase/Storage updated)"
 
       - name: Install fastlane
         run: |
@@ -166,7 +170,7 @@ jobs:
           fastlane ci_release
           echo "DONE: fastlane ci_release"
 
-      # --- Проверка TestFlight одной командой fastlane -----------------------
+      # --- Проверка TestFlight одной командой fastlane (lane verify_tf) ------
       - name: Verify TestFlight (latest build number)
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
