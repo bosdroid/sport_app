@@ -117,7 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   text: AppStrings.loginWithEmail,
                 ),
                 SizedBox(height: 16),
-                if (Platform.isAndroid)
                 PrimaryButton(
                   onPressed: () async {
                     try {
@@ -134,7 +133,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   text: AppStrings.loginWithGoogle,
                 ),
                 if (Platform.isIOS)
-                  PrimaryButton(
+                  ...[
+                    SizedBox(height: 16),
+                    PrimaryButton(
                     onPressed: () async {
                       try {
                         await authProvider.loginWithApple();
@@ -154,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       }
                     },
                     text: AppStrings.loginWithApple,
-                  ),
+                  ),],
                 SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
