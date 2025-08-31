@@ -176,7 +176,23 @@ jobs:
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/match_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
           cd ios
+
+          # Печатаем хвост gym-лога при падении, чтобы видеть первопричину Exit 65
+          set +e
           fastlane ci_release
+          STATUS=$?
+          set -e
+          if [ $STATUS -ne 0 ]; then
+            echo "===== Tail of latest gym log ====="
+            LATEST_LOG=$(ls -t ~/Library/Logs/gym/*/*.log 2>/dev/null | head -n1 || true)
+            if [ -n "${LATEST_LOG:-}" ] && [ -f "$LATEST_LOG" ]; then
+              tail -n 400 "$LATEST_LOG" || true
+            else
+              echo "No gym log found at ~/Library/Logs/gym"
+            fi
+            exit $STATUS
+          fi
+
           echo "DONE: fastlane ci_release"
 
       - name: Verify TestFlight (latest build number)
