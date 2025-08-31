@@ -3,8 +3,8 @@ opt_out_usage
 default_platform(:ios)
 
 platform :ios do
-  # Жёстко проставляем bundle id в Info.plist и проект, и включаем auto-signing
-  desc "Fix bundle id and team in Xcode project"
+  # Жёстко проставляем bundle id и переводим Runner на MANUAL signing под AppStore
+  desc "Fix bundle id, team, and force manual signing for Release"
   lane :fix_ids do
     # 1) В Info.plist ставим CFBundleIdentifier = com.drillbox.app
     set_info_plist_value(
@@ -13,27 +13,33 @@ platform :ios do
       value: "com.drillbox.app"
     )
 
-    # 2) В проект (build settings) ставим тот же bundle id
+    # 2) В проекте обновляем bundle id
     update_app_identifier(
       xcodeproj: "Runner.xcodeproj",
       plist_path: "Runner/Info.plist",
       app_identifier: "com.drillbox.app"
     )
 
-    # 3) Правильная команда и автоматический кодсайн на таргете(ах)
-    update_project_team(
-      teamid: ENV["APPLE_TEAM_ID"],
-      targets: ["Runner", "RunnerTests"]
+    # 3) Runner -> manual signing c Distribution-профилем от match
+    update_code_signing_settings(
+      use_automatic_signing: false,                     # <-- manual
+      path: "Runner.xcodeproj",
+      targets: ["Runner"],
+      team_id: ENV["APPLE_TEAM_ID"],
+      code_sign_identity: "Apple Distribution",
+      profile_name: "match AppStore com.drillbox.app"   # имя профиля, который создаёт match
     )
+
+    # (Опционально) Тестовый таргет можно оставить на авто
     update_code_signing_settings(
       use_automatic_signing: true,
       path: "Runner.xcodeproj",
-      targets: ["Runner", "RunnerTests"],
+      targets: ["RunnerTests"],
       team_id: ENV["APPLE_TEAM_ID"]
     )
   end
 
-  desc "Build & upload to TestFlight (CI)"
+  desc "Build & upload to TestFlight (CI) — manual signing"
   lane :ci_release do
     api_key = app_store_connect_api_key(
       key_id: ENV["ASC_KEY_ID"],
@@ -56,28 +62,32 @@ platform :ios do
     )
     UI.success("match done")
 
-    # Доп. страховка: снова включим нужный team и auto-signing
-    update_project_team(
-      teamid: ENV["APPLE_TEAM_ID"],
-      targets: ["Runner", "RunnerTests"]
-    )
+    # На всякий случай — повторно закрепим manual signing для Runner
     update_code_signing_settings(
-      use_automatic_signing: true,
+      use_automatic_signing: false,
       path: "Runner.xcodeproj",
-      targets: ["Runner", "RunnerTests"],
-      team_id: ENV["APPLE_TEAM_ID"]
+      targets: ["Runner"],
+      team_id: ENV["APPLE_TEAM_ID"],
+      code_sign_identity: "Apple Distribution",
+      profile_name: "match AppStore com.drillbox.app"
     )
 
-    UI.header("2/3 build_ios_app (archive & export)")
+    UI.header("2/3 build_ios_app (archive & export, manual signing)")
     build_ios_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       configuration: "Release",
       export_method: "app-store",
-      xcargs: %Q[-allowProvisioningUpdates DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Automatic PROVISIONING_PROFILE_SPECIFIER="" PROVISIONING_PROFILE=""],
+      xcargs: %Q[
+        -allowProvisioningUpdates
+        DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}
+        CODE_SIGN_STYLE=Manual
+        CODE_SIGN_IDENTITY="Apple Distribution"
+        PROVISIONING_PROFILE_SPECIFIER="match AppStore com.drillbox.app"
+      ],
       export_options: {
         teamID: ENV['APPLE_TEAM_ID'],
-        signingStyle: "automatic",
+        signingStyle: "manual",
         provisioningProfiles: {
           "com.drillbox.app" => "match AppStore com.drillbox.app"
         }

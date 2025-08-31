@@ -84,14 +84,14 @@ jobs:
           echo "DONE: fastlane installed"
 
       # === Жёстко проставляем bundle id и team ДО любых проверок
-      - name: Fastlane fix identifiers (bundle id & team)
+      - name: Fastlane fix identifiers (bundle id & team to manual signing)
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           cd ios
           fastlane fix_ids
-          echo "DONE: identifiers fixed"
+          echo "DONE: identifiers fixed (manual signing)"
 
       # --- Преддиагностика Xcode --------------------------------------------
       - name: Preflight — verify workspace and settings
@@ -107,14 +107,14 @@ jobs:
           echo
           echo "== Ensure 'Runner' scheme exists and is SHARED =="
           if ! xcodebuild -list -workspace Runner.xcworkspace | grep -E '^(\s*)Runner$' >/dev/null; then
-            echo "Scheme 'Runner' not found (или не Shared). Открой проект локально и сделай Product -> Scheme -> Manage Schemes... -> Share."
+            echo "Scheme 'Runner' not found (или не Shared). Открой проект локально и включи Share."
             exit 1
           fi
           echo
           echo "== Key build settings (grep) =="
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE|CODE_SIGN_IDENTITY|PROVISIONING_PROFILE_SPECIFIER" || true
 
-      # --- Проверяем по Info.plist (а не по showBuildSettings)
+      # --- Проверяем по Info.plist
       - name: Assert expected identifiers
         env:
           EXPECTED_BUNDLE_ID: com.drillbox.app
@@ -130,23 +130,6 @@ jobs:
           test "$TEAM" = "$EXPECTED_TEAM_ID" || { echo "Team id mismatch! Expected $EXPECTED_TEAM_ID"; exit 1; }
           echo "Identifiers OK"
 
-      - name: Preflight compile (no signing)
-        run: |
-          set -euo pipefail
-          cd ios
-          xcodebuild \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination "generic/platform=iOS" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_STYLE=Automatic \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            PROVISIONING_PROFILE="" \
-            build
-
       - name: Flutter build iOS (no codesign)
         run: |
           set -euo pipefail
@@ -155,7 +138,7 @@ jobs:
           flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
           echo "DONE: flutter build ios"
 
-      - name: Build and upload with fastlane
+      - name: Build and upload with fastlane (manual signing)
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -183,7 +166,6 @@ jobs:
 
           cd ios
 
-          # Печатаем хвост gym-лога при падении, чтобы видеть первопричину Exit 65
           set +e
           fastlane ci_release
           STATUS=$?
@@ -196,33 +178,10 @@ jobs:
             else
               echo "No gym log found at ~/Library/Logs/gym"
             fi
-            # Выполним ручной archive, чтобы снять полный сырой лог xcodebuild
-            echo "===== Running raw xcodebuild archive for diagnostics ====="
-            xcodebuild \
-              -workspace Runner.xcworkspace \
-              -scheme Runner \
-              -configuration Release \
-              -archivePath "$PWD/build/Runner.xcarchive" \
-              -destination "generic/platform=iOS" \
-              -allowProvisioningUpdates \
-              DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
-              CODE_SIGN_STYLE=Automatic \
-              PROVISIONING_PROFILE_SPECIFIER="" \
-              PROVISIONING_PROFILE="" \
-              clean archive | tee "$PWD/xcodebuild-archive.log"
             exit $STATUS
           fi
 
           echo "DONE: fastlane ci_release"
-
-      # После match/sigh посмотрим, что реально установилось
-      - name: Post-match diagnostics
-        if: failure()
-        run: |
-          set -euo pipefail
-          security find-identity -v -p codesigning || true
-          echo "--- Profiles ---"
-          ls -l ~/Library/MobileDevice/Provisioning\ Profiles/ || true
 
       - name: Verify TestFlight (latest build number)
         if: success()
@@ -242,8 +201,6 @@ jobs:
           name: ipa-and-logs
           path: |
             ios/*.ipa
-            ios/xcodebuild-archive.log
-            ios/build/**/*.{xcarchive,log}
             ~/Library/Logs/gym/**/*
             ~/Library/Logs/scan/**/*
             ~/Library/Logs/fastlane/**/*
