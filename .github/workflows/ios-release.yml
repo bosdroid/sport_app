@@ -10,6 +10,8 @@ on:
 jobs:
   build-upload:
     runs-on: macos-15
+    env:
+      COCOAPODS_PARALLEL_CODE_SIGN: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +41,7 @@ jobs:
       - name: Setup SSH for match (deploy key)
         shell: bash
         env:
-          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}  # приватный ключ (OpenSSH или base64)
+          MATCH_SSH_KEY: ${{ secrets.MATCH_SSH_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${MATCH_SSH_KEY:-}" ]; then
@@ -66,15 +68,61 @@ jobs:
           git ls-remote git@github.com:bosdroid/ios-certs.git >/dev/null
           echo "SSH access to ios-certs OK"
 
-      # ---- CocoaPods --------------------------------------------------------
-      - name: CocoaPods install
+      # ---- КЭШ Pub (Flutter пакеты) ----------------------------------------
+      - name: Cache Pub
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PUB_CACHE }}
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
+      # ---- КЭШ CocoaPods Specs ---------------------------------------------
+      - name: Cache CocoaPods Specs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cocoapods
+          key: cocoapods-specs-${{ runner.os }}-v1
+          restore-keys: |
+            cocoapods-specs-${{ runner.os }}-
+
+      # ---- КЭШ Pods ---------------------------------------------------------
+      - name: Cache Pods
+        id: cache-pods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            pods-${{ runner.os }}-
+
+      # ---- КЭШ DerivedData (фиксированный путь) -----------------------------
+      - name: Cache Xcode DerivedData
+        id: cache-dd
+        uses: actions/cache@v4
+        with:
+          path: ios/.derived_data
+          key: dd-${{ runner.os }}-xcode16.4-${{ hashFiles('ios/Podfile.lock', 'pubspec.lock') }}
+          restore-keys: |
+            dd-${{ runner.os }}-xcode16.4-
+            dd-${{ runner.os }}-
+
+      # ---- Установка pods ---------------------------------------------------
+      - name: CocoaPods install (with repo update on cold cache)
+        if: steps.cache-pods.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           cd ios
-          pod repo update --no-ansi
-          pod update Firebase/Storage --no-ansi || true
-          pod install --no-ansi
-          echo "DONE: CocoaPods install"
+          pod install --repo-update --no-ansi
+          echo "DONE: CocoaPods install (cold)"
+
+      - name: CocoaPods install (fast path)
+        if: steps.cache-pods.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          cd ios
+          pod install --no-ansi --deployment
+          echo "DONE: CocoaPods install (cached)"
 
       - name: Install fastlane
         run: |
@@ -83,7 +131,7 @@ jobs:
           gem install fastlane
           echo "DONE: fastlane installed"
 
-      # === Жёстко проставляем bundle id и team ДО любых проверок
+      # === Жёстко проставляем bundle id и manual signing под AppStore
       - name: Fastlane fix identifiers (bundle id & team to manual signing)
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -102,19 +150,12 @@ jobs:
             echo "Runner.xcworkspace NOT FOUND"
             exit 1
           fi
-          echo "== Available schemes =="
+          echo "== Schemes =="
           xcodebuild -list -workspace Runner.xcworkspace || true
           echo
-          echo "== Ensure 'Runner' scheme exists and is SHARED =="
-          if ! xcodebuild -list -workspace Runner.xcworkspace | grep -E '^(\s*)Runner$' >/dev/null; then
-            echo "Scheme 'Runner' not found (или не Shared). Открой проект локально и включи Share."
-            exit 1
-          fi
-          echo
-          echo "== Key build settings (grep) =="
+          echo "== Build Settings (key ones) =="
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | egrep "PRODUCT_BUNDLE_IDENTIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE|CODE_SIGN_IDENTITY|PROVISIONING_PROFILE_SPECIFIER" || true
 
-      # --- Проверяем по Info.plist
       - name: Assert expected identifiers
         env:
           EXPECTED_BUNDLE_ID: com.drillbox.app
@@ -123,18 +164,18 @@ jobs:
           set -euo pipefail
           cd ios
           BID_PLIST=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "Runner/Info.plist")
-          echo "Info.plist CFBundleIdentifier=$BID_PLIST"
           TEAM=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner -showBuildSettings | awk -F= '/^[[:space:]]*DEVELOPMENT_TEAM[[:space:]]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')
+          echo "Info.plist CFBundleIdentifier=$BID_PLIST"
           echo "Detected DEVELOPMENT_TEAM=$TEAM"
           test "$BID_PLIST" = "$EXPECTED_BUNDLE_ID" || { echo "Bundle id mismatch! Expected $EXPECTED_BUNDLE_ID"; exit 1; }
           test "$TEAM" = "$EXPECTED_TEAM_ID" || { echo "Team id mismatch! Expected $EXPECTED_TEAM_ID"; exit 1; }
           echo "Identifiers OK"
 
+      # Важно: НЕ делаем 'flutter clean' — сохраняем инкрементность
       - name: Flutter build iOS (no codesign)
         run: |
           set -euo pipefail
           echo "START: flutter build ios"
-          flutter clean
           flutter build ios --release --no-codesign --build-number ${{ github.run_number }}
           echo "DONE: flutter build ios"
 
@@ -142,7 +183,7 @@ jobs:
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}   # base64 p8
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           MATCH_GIT_URL: git@github.com:bosdroid/ios-certs.git
           MATCH_GIT_BRANCH: ${{ secrets.MATCH_GIT_BRANCH }}
@@ -201,6 +242,7 @@ jobs:
           name: ipa-and-logs
           path: |
             ios/*.ipa
+            ios/.derived_data/**/*
             ~/Library/Logs/gym/**/*
             ~/Library/Logs/scan/**/*
             ~/Library/Logs/fastlane/**/*

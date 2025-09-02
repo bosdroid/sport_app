@@ -6,31 +6,24 @@ platform :ios do
   # Жёстко проставляем bundle id и переводим Runner на MANUAL signing под AppStore
   desc "Fix bundle id, team, and force manual signing for Release"
   lane :fix_ids do
-    # 1) В Info.plist ставим CFBundleIdentifier = com.drillbox.app
     set_info_plist_value(
       path: "Runner/Info.plist",
       key: "CFBundleIdentifier",
       value: "com.drillbox.app"
     )
-
-    # 2) В проекте обновляем bundle id
     update_app_identifier(
       xcodeproj: "Runner.xcodeproj",
       plist_path: "Runner/Info.plist",
       app_identifier: "com.drillbox.app"
     )
-
-    # 3) Runner -> manual signing c Distribution-профилем от match
     update_code_signing_settings(
-      use_automatic_signing: false,                     # <-- manual
+      use_automatic_signing: false,
       path: "Runner.xcodeproj",
       targets: ["Runner"],
       team_id: ENV["APPLE_TEAM_ID"],
       code_sign_identity: "Apple Distribution",
-      profile_name: "match AppStore com.drillbox.app"   # имя профиля, который создаёт match
+      profile_name: "match AppStore com.drillbox.app"
     )
-
-    # (Опционально) Тестовый таргет можно оставить на авто
     update_code_signing_settings(
       use_automatic_signing: true,
       path: "Runner.xcodeproj",
@@ -62,7 +55,7 @@ platform :ios do
     )
     UI.success("match done")
 
-    # На всякий случай — повторно закрепим manual signing для Runner
+    # Закрепим manual signing для Runner
     update_code_signing_settings(
       use_automatic_signing: false,
       path: "Runner.xcodeproj",
@@ -78,12 +71,18 @@ platform :ios do
       scheme: "Runner",
       configuration: "Release",
       export_method: "app-store",
+      derived_data_path: ".derived_data",
       xcargs: %Q[
         -allowProvisioningUpdates
         DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}
         CODE_SIGN_STYLE=Manual
         CODE_SIGN_IDENTITY="Apple Distribution"
         PROVISIONING_PROFILE_SPECIFIER="match AppStore com.drillbox.app"
+        CLANG_ENABLE_INDEX_STORE=NO
+        SWIFT_COMPILATION_MODE=wholemodule
+        ONLY_ACTIVE_ARCH=NO
+        ARCHS=arm64
+        -showBuildTimingSummary
       ],
       export_options: {
         teamID: ENV['APPLE_TEAM_ID'],
@@ -92,7 +91,7 @@ platform :ios do
           "com.drillbox.app" => "match AppStore com.drillbox.app"
         }
       },
-      clean: true,
+      clean: false,              # НЕ чистим, чтобы работала инкрементность
       disable_xcpretty: true
     )
     UI.success("build_ios_app done")
@@ -115,9 +114,6 @@ platform :ios do
       is_key_content_base64: true
     )
     version = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleShortVersionString")
-    build_in_plist = get_info_plist_value(path: "Runner/Info.plist", key: "CFBundleVersion")
-    UI.message("Project Info.plist -> version=#{version} build=#{build_in_plist}")
-
     latest = latest_testflight_build_number(
       app_identifier: "com.drillbox.app",
       version: version,
