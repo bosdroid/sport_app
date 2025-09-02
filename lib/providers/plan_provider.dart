@@ -643,10 +643,10 @@ class PlanProvider with ChangeNotifier {
       List<XFile> pickedImages = await _imageService.pickMultipleImages();
 
       if (pickedImages.isNotEmpty) {
-        if (_selectedImages.length + pickedImages.length > 5) {
-          await _validationProvider.updateImageError();
-          return;
-        }
+        // if (_selectedImages.length + pickedImages.length > 5) {
+        //   await _validationProvider.updateImageError();
+        //   return;
+        // }
         pickedImages.map((xfile) async {
           await _validationProvider.validateImage(xfile);
           if (_validationProvider.imagesError != null) {
@@ -676,11 +676,11 @@ class PlanProvider with ChangeNotifier {
       List<XFile> pickedImages = await _imageService.pickMultipleImages();
 
       if (pickedImages.isNotEmpty) {
-        if(_selectedImages.length + pickedImages.length > 5)
-        {
-          await _validationProvider.updateImageError();
-          return plan;
-        }
+        // if(_selectedImages.length + pickedImages.length > 5)
+        // {
+        //   await _validationProvider.updateImageError();
+        //   return plan;
+        // }
         pickedImages.map((xfile) async {
           await _validationProvider.validateImage(xfile);
           if (_validationProvider.imagesError != null) {
