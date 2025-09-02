@@ -1040,6 +1040,7 @@ class PlanProvider with ChangeNotifier {
     }
   }
   StreamSubscription<DatabaseEvent>? _plansSubscription;
+
   Future<void> fetchPlans() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -1735,8 +1736,7 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateConnections(
-      String userId, String parentId, String childId) async {
+  Future<void> updateConnections(String userId, String parentId, String childId) async {
     try {
       // Add childId to parent's "to" list
       await _plansRef.child('$parentId/to').update({
@@ -1767,8 +1767,7 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateConnections2(
-      String userId, List<String> parentIds, String childId) async {
+  Future<void> updateConnections2(String userId, List<String> parentIds, String childId) async {
     try {
       for (String parentId in parentIds) {
         // Add childId to parent's "to" list
@@ -1803,8 +1802,7 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
-  Future<void> linkPlans(
-      {required String parentId, required String childId}) async {
+  Future<void> linkPlans({required String parentId, required String childId}) async {
     final prefs = await SharedPreferences.getInstance();
     final String userId = prefs.getString("user_name") ?? '';
 
@@ -1820,10 +1818,7 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> removeLink({
-    required String parentId,
-    required String childId,
-  }) async {
+  Future<void> removeLink({required String parentId, required String childId,}) async {
     try {
       // Remove childId from parent's "to" list
       await _plansRef.child('$parentId/to/$childId').remove();
@@ -1849,7 +1844,6 @@ class PlanProvider with ChangeNotifier {
       print('Error removing link: $e');
     }
   }
-
 
   List<Plan> getParentPlans(String planId,bool isShared) {
     if(isShared){
