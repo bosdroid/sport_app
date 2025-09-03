@@ -178,27 +178,11 @@ class AuthProvider with ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-
-      final rawNonce = _generateNonce();
-      final nonce = _sha256ofString(rawNonce);
-
-      // Ask Apple for credential
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-        nonce: nonce,
-      );
-
-      // Create OAuth credential for Firebase
-      final oauthCredential = OAuthProvider("apple.com").credential(
-        idToken: appleCredential.identityToken,
-        rawNonce: rawNonce,
-      );
+      
+      final appleProvider = AppleAuthProvider();
 
       // Sign in with Firebase
-      final authResult = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      final authResult = await FirebaseAuth.instance.signInWithProvider(appleProvider);
       _user = authResult.user;
 
       // Save session
