@@ -29,11 +29,11 @@ class DefaultFirebaseOptions {
 
   // Add your own values copied from the Firebase console ↓
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDgIR4g0A01rGdZthkGGWNRkcHDtfoWRpY',
+    apiKey: 'AIzaSyCulUbVKcQT4HGLIk6ZyAGlguuYqYdjstk',
     appId: '1:1037131909342:ios:1c511f664d10be98701a4f',
     messagingSenderId: '1037131909342',
     projectId: 'bjj-diary-ba601',
-    iosBundleId: 'com.bjjdairy.app',
+    iosBundleId: 'com.drillbox.app',
     iosClientId: '...',
     databaseURL: 'https://bjj-diary-ba601-default-rtdb.firebaseio.com',
     storageBucket: 'bjj-diary-ba601.firebasestorage.app',
