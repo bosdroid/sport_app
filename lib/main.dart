@@ -28,6 +28,7 @@ Future<void> main() async {
     await Permission.notification.request();
   }
   // Initialise the default Firebase app.
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
