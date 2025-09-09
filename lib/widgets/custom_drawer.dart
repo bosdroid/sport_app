@@ -67,7 +67,11 @@ class CustomDrawer extends StatelessWidget {
             title: const Text('Logout'),
             onTap: () => onItemTap('logout'),
           ),
-
+          ListTile(
+            leading: const Icon(Icons.delete_rounded),
+            title: const Text('Delete Account'),
+            onTap: () => onItemTap('delete-account'),
+          ),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.only(left: 16, bottom: 16),

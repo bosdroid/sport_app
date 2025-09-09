@@ -12,6 +12,14 @@ import 'package:crypto/crypto.dart' as crypto;
 class AuthProvider with ChangeNotifier {
   final DatabaseReference _usernamesRef = FirebaseDatabase.instance.ref().child('USERNAMES/');
   final DatabaseReference _usersDetailsRef = FirebaseDatabase.instance.ref().child('USERS_DETAILS/');
+  final DatabaseReference _foldersRef = FirebaseDatabase.instance.ref().child('FOLDERS/');
+  final DatabaseReference _goalsRef = FirebaseDatabase.instance.ref().child('USERS/GOALS/');
+  final DatabaseReference _historyGoalsRef = FirebaseDatabase.instance.ref().child('GOALS_HISTORY/');
+  final DatabaseReference _logRef = FirebaseDatabase.instance.ref().child('USERS/LOGS/');
+  final DatabaseReference _historyLogsRef = FirebaseDatabase.instance.ref().child('LOGS_HISTORY/');
+  final DatabaseReference _notesRef = FirebaseDatabase.instance.ref().child('NOTES/');
+  final DatabaseReference _plansRef = FirebaseDatabase.instance.ref().child('PLANS/');
+  final DatabaseReference _favouritesRef = FirebaseDatabase.instance.ref().child('FAVOURITES/');
 
   User? _user;
   bool _isLoading = false;
@@ -319,6 +327,72 @@ class AuthProvider with ChangeNotifier {
 
     _user = null;
     notifyListeners();
+  }
+
+  Future<bool> deleteAccount() async {
+
+    final prefs = await SharedPreferences.getInstance();
+    final String userId = prefs.getString("user_name") ?? '';
+    _usersDetailsRef.child(userId).remove();
+    _usernamesRef.child(user!.uid).remove();
+
+    final snapshot = await _foldersRef
+        .orderByChild("userId")
+        .equalTo(userId)
+        .get();
+
+    if (snapshot.exists) {
+      for (var child in snapshot.children) {
+        await child.ref.remove(); // delete each matched node
+      }
+      print("All folders for userId=$userId deleted");
+    } else {
+      print("No folders found for userId=$userId");
+    }
+
+    _goalsRef.child(userId).remove();
+    _logRef.child(userId).remove();
+    _historyGoalsRef.child(userId).remove();
+    _historyLogsRef.child(userId).remove();
+    _notesRef.child(userId).remove();
+
+    final snapshot1 = await _plansRef
+        .orderByChild("userId")
+        .equalTo(userId)
+        .get();
+
+    if (snapshot1.exists) {
+      for (var child in snapshot1.children) {
+        await child.ref.remove(); // delete each matched node
+      }
+      print("All plans for userId=$userId deleted");
+    } else {
+      print("No plans found for userId=$userId");
+    }
+
+    final snapshot2 = await _favouritesRef
+        .orderByChild("userId")
+        .equalTo(userId)
+        .get();
+
+    if (snapshot2.exists) {
+      for (var child in snapshot2.children) {
+        await child.ref.remove(); // delete each matched node
+      }
+      print("All favourites for userId=$userId deleted");
+    } else {
+      print("No favourites found for userId=$userId");
+    }
+
+    if (user != null) {
+      await user!.delete();
+      logout();
+      print("User account deleted successfully");
+      return true;
+    } else {
+      print("No user is currently signed in");
+      return false;
+    }
   }
 
   String? validateUsernameInput(String username) {

@@ -640,6 +640,17 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
                 Navigator.pushReplacementNamed(
                     context, RoutesNames.loginScreen);
                 break;
+              case 'delete-account':
+                Util.showConfirmationDialog(context: context, title: 'Delete Account', content: 'Are you sure you want to permanently remove your account?', onConfirmed: () async {
+                final bool result = await authProvider.deleteAccount();
+                if(result) {
+                  if (!context.mounted) return;
+                  Navigator.pushReplacementNamed(
+                      context, RoutesNames.loginScreen);
+                }
+                });
+
+                break;
               case 'privacy':
                 final Uri privacyUrl = Uri.parse('https://bosdroid.github.io/sport_app/privacy-policy.html');
 
