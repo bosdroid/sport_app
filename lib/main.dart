@@ -99,7 +99,7 @@ class MyApp extends StatelessWidget {
             create: (context) {
               final validationProvider =
                   Provider.of<ValidationProvider>(context, listen: false);
-              final planProvider = PlanProvider();
+              final planProvider = PlanProvider(PlanRepositoryImpl(auth: FirebaseAuth.instance));
               planProvider.updateDependencies(validationProvider);
               return planProvider;
             },

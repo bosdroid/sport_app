@@ -1,4 +1,6 @@
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +10,12 @@ import '../presentation/providers/validation_provider.dart';
 
 
 class Util {
+
+  static String generateRandomShareId({int length = 6}) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    final rand = Random();
+    return List.generate(length, (index) => chars[rand.nextInt(chars.length)]).join();
+  }
 
   static Future<bool> showDeleteConfirmationDialog(BuildContext context,String text) async {
     return await showDialog(
