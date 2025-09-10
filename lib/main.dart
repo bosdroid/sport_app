@@ -25,6 +25,8 @@ Future<void> main() async {
   tz.initializeTimeZones();
   var status = await Permission.notification.status;
   if (!status.isGranted) {
+
+
     await Permission.notification.request();
   }
   // Initialise the default Firebase app.
