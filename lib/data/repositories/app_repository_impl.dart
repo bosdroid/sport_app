@@ -6,8 +6,10 @@ import '../../domain/entities/video.dart';
 import '../../domain/repositories/app_repository.dart';
 
 class AppRepositoryImpl implements AppRepository {
-  final DatabaseReference _videosRef =
-  FirebaseDatabase.instance.ref().child('VIDEOS');
+  final DatabaseReference _videosRef;
+
+  AppRepositoryImpl({DatabaseReference? videosRef})
+      : _videosRef = videosRef ?? FirebaseDatabase.instance.ref().child('VIDEOS');
 
   @override
   Future<List<Video>> fetchVideos() async {
@@ -17,7 +19,6 @@ class AppRepositoryImpl implements AppRepository {
     final List<Video> parsed = [];
 
     if (snap.value is List) {
-      // Handle list case
       final list = snap.value as List;
       for (final item in list) {
         if (item != null) {
@@ -25,7 +26,6 @@ class AppRepositoryImpl implements AppRepository {
         }
       }
     } else if (snap.value is Map) {
-      // Handle map case
       final map = Map<String, dynamic>.from(snap.value as Map);
       for (final item in map.values) {
         parsed.add(Video.fromJson(Map<String, dynamic>.from(item)));
@@ -58,3 +58,4 @@ class AppRepositoryImpl implements AppRepository {
     await prefs.setString('cached_videos', jsonStr);
   }
 }
+

@@ -1,7 +1,12 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 
 class AppAnalytics {
-  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  static FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+
+  // allow override in tests
+  static void setAnalytics(FirebaseAnalytics analytics) {
+    _analytics = analytics;
+  }
 
   static Future<void> logAppOpen() async {
     await _analytics.logAppOpen();

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 import 'package:bjj_dairy/core/utils.dart';
 import 'package:bjj_dairy/presentation/providers/validation_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,17 +21,28 @@ import '../../domain/repositories/plan_repository.dart';
 class PlanProvider with ChangeNotifier {
 
   final PlanRepository _planRepository;
+  final DatabaseReference _plansRef;
+  final DatabaseReference _foldersRef;
+  final DatabaseReference shareIdsRef;
+  final DatabaseReference _favouritesRef;
+  final FirebaseAuth _auth;
+  final ImageService _imageService; // 👈 add this
 
-  PlanProvider(this._planRepository);
+  PlanProvider(
+      this._planRepository, {
+        DatabaseReference? plansRef,
+        DatabaseReference? foldersRef,
+        DatabaseReference? shareIdsRef,
+        DatabaseReference? favouritesRef,
+        FirebaseAuth? auth,
+        ImageService? imageService, // 👈 add this
+      })  : _plansRef = plansRef ?? FirebaseDatabase.instance.ref().child('PLANS/'),
+        _foldersRef = foldersRef ?? FirebaseDatabase.instance.ref().child('FOLDERS/'),
+        shareIdsRef = shareIdsRef ?? FirebaseDatabase.instance.ref().child('SHARE_IDS/'),
+        _favouritesRef = favouritesRef ?? FirebaseDatabase.instance.ref().child('FAVOURITES/'),
+        _auth = auth ?? FirebaseAuth.instance,
+        _imageService = imageService ?? ImageService(); // 👈 default only in production
 
-  final DatabaseReference _plansRef =
-      FirebaseDatabase.instance.ref().child('PLANS/');
-  final DatabaseReference _foldersRef =
-      FirebaseDatabase.instance.ref().child('FOLDERS/');
-  final DatabaseReference _shareIdsRef =
-  FirebaseDatabase.instance.ref().child('SHARE_IDS/');
-  final DatabaseReference _favouritesRef = FirebaseDatabase.instance.ref().child('FAVOURITES/');
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final List<String> _suggestedTags = [
     'submissions',
     'escapes',
@@ -71,7 +81,7 @@ class PlanProvider with ChangeNotifier {
   List<SelectedImage> _selectedImages = [];
 
   List<SelectedImage> get selectedImages => _selectedImages;
-  final ImageService _imageService = ImageService();
+  // final ImageService _imageService = ImageService();
   List<String> _finalUploadImages = [];
 
   List<String> get finalUploadImages => _finalUploadImages;
@@ -488,7 +498,6 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-
   Future<void> updateFolder(String folderId, String newName) async {
     try {
       await _planRepository.updateFolderName(folderId, newName);
@@ -524,30 +533,24 @@ class PlanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void pickImages() async {
+  Future<void> pickImages() async {
     try {
       await _validationProvider.validateImages(_selectedImages);
-      if (_validationProvider.imagesError != null) {
-        return;
-      }
+      if (_validationProvider.imagesError != null) return;
 
       List<XFile> pickedImages = await _imageService.pickMultipleImages();
 
       if (pickedImages.isNotEmpty) {
-        // if (_selectedImages.length + pickedImages.length > 5) {
-        //   await _validationProvider.updateImageError();
-        //   return;
-        // }
-        pickedImages.map((xfile) async {
+        // Validate images sequentially
+        for (final xfile in pickedImages) {
           await _validationProvider.validateImage(xfile);
-          if (_validationProvider.imagesError != null) {
-            return;
-          }
-        });
+          if (_validationProvider.imagesError != null) return;
+        }
+
         _selectedImages.addAll(
-          pickedImages
-              .map((xfile) => SelectedImage(localFile: File(xfile.path))),
+          pickedImages.map((xfile) => SelectedImage(localFile: File(xfile.path))),
         );
+
         notifyListeners(); // Update your UI
       } else {
         print('No images selected.');
@@ -559,40 +562,42 @@ class PlanProvider with ChangeNotifier {
 
   Future<Plan?> pickAndUploadImages(Plan? plan) async {
     try {
+      // Validate current selected images
       await _validationProvider.validateImages(_selectedImages);
       if (_validationProvider.imagesError != null) {
-        plan;
+        return plan;
       }
 
+      // Pick new images
       List<XFile> pickedImages = await _imageService.pickMultipleImages();
 
       if (pickedImages.isNotEmpty) {
-        // if(_selectedImages.length + pickedImages.length > 5)
-        // {
-        //   await _validationProvider.updateImageError();
-        //   return plan;
-        // }
-        pickedImages.map((xfile) async {
+        // Validate each picked image
+        for (final xfile in pickedImages) {
           await _validationProvider.validateImage(xfile);
           if (_validationProvider.imagesError != null) {
             return plan;
           }
-        });
+        }
+
+        // Add to selected images
         _selectedImages.addAll(
-          pickedImages
-              .map((xfile) => SelectedImage(localFile: File(xfile.path))),
+          pickedImages.map((xfile) => SelectedImage(localFile: File(xfile.path))),
         );
+
+        // Update plan if provided
         if (plan != null) {
           final latestPlan = await updatedPlan(plan);
           return latestPlan;
         }
-        notifyListeners(); // Update your UI
-      } else {
-        // print('No images selected.');
+
+        notifyListeners();
         return plan;
       }
+
+      // No images picked
+      return plan;
     } catch (e) {
-      // print('Error picking images: $e');
       return plan;
     }
   }

@@ -99,7 +99,13 @@ class MyApp extends StatelessWidget {
             create: (context) {
               final validationProvider =
                   Provider.of<ValidationProvider>(context, listen: false);
-              final planProvider = PlanProvider(PlanRepositoryImpl(auth: FirebaseAuth.instance));
+              final planProvider = PlanProvider(PlanRepositoryImpl(auth: FirebaseAuth.instance),
+                plansRef: FirebaseDatabase.instance.ref().child('PLANS/'),
+                foldersRef: FirebaseDatabase.instance.ref().child('FOLDERS/'),
+                shareIdsRef: FirebaseDatabase.instance.ref().child('SHARE_IDS/'),
+                favouritesRef: FirebaseDatabase.instance.ref().child('FAVOURITES/'),
+                auth: FirebaseAuth.instance,
+              );
               planProvider.updateDependencies(validationProvider);
               return planProvider;
             },

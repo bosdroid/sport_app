@@ -30,7 +30,7 @@ class Plan {
     required this.userId,
     required this.title,
     required this.description,
-    required this.videos,
+     this.videos,
     required this.timestamp,
     this.from = const [],
     this.to = const [],

@@ -17,8 +17,7 @@ void main() {
 
   setUp(() {
     mockVideosRef = MockDatabaseReference();
-    repository = AppRepositoryImpl();
-    // override private field via reflection? → Instead, we mock by stubbing `.get()`
+    repository = AppRepositoryImpl(videosRef: mockVideosRef);
   });
 
   group('AppRepositoryImpl', () {
@@ -29,13 +28,11 @@ void main() {
       when(() => mockSnapshot.exists).thenReturn(false);
       when(() => mockSnapshot.value).thenReturn(null);
 
-      // manually call using mock ref instead of repository._videosRef
-      final snap = mockSnapshot;
-      expect(snap.exists, false);
+      final result = await repository.fetchVideos();
+      expect(result, []);
     });
 
     test('fetchVideos parses list correctly', () async {
-      final repo = AppRepositoryImpl();
       final snapshot = MockDataSnapshot();
 
       final mockList = [
@@ -43,25 +40,26 @@ void main() {
         {'id': '2', 'title': 'Video 2'},
       ];
 
+      when(() => mockVideosRef.get()).thenAnswer((_) async => snapshot);
       when(() => snapshot.exists).thenReturn(true);
       when(() => snapshot.value).thenReturn(mockList);
 
-      // inject directly
-      final result = await repo.fetchVideos();
+      final result = await repository.fetchVideos();
       expect(result, isA<List<Video>>());
+      expect(result.length, 2);
     });
 
     test('cacheVideos and loadCachedVideos works', () async {
-      SharedPreferences.setMockInitialValues({}); // clean prefs
-      final repo = AppRepositoryImpl();
+      SharedPreferences.setMockInitialValues({});
+      repository = AppRepositoryImpl(videosRef: mockVideosRef);
 
       final videos = [
         Video(title: 'Test Video 1', link: ''),
         Video(title: 'Test Video 2', link: ''),
       ];
 
-      await repo.cacheVideos(videos);
-      final loaded = await repo.loadCachedVideos();
+      await repository.cacheVideos(videos);
+      final loaded = await repository.loadCachedVideos();
 
       expect(loaded.length, 2);
       expect(loaded.first.title, 'Test Video 1');
@@ -69,9 +67,9 @@ void main() {
 
     test('loadCachedVideos returns [] when invalid JSON', () async {
       SharedPreferences.setMockInitialValues({'cached_videos': 'invalid_json'});
-      final repo = AppRepositoryImpl();
+      repository = AppRepositoryImpl(videosRef: mockVideosRef);
 
-      final loaded = await repo.loadCachedVideos();
+      final loaded = await repository.loadCachedVideos();
       expect(loaded, []);
     });
   });

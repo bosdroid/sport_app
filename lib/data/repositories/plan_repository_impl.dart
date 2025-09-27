@@ -10,23 +10,25 @@ import '../../domain/repositories/plan_repository.dart';
 import '../services/image_service.dart';
 
 class PlanRepositoryImpl implements PlanRepository {
-  final DatabaseReference _plansRef =
-  FirebaseDatabase.instance.ref().child('PLANS/');
-  final DatabaseReference _shareIdsRef =
-  FirebaseDatabase.instance.ref().child('SHARE_IDS/');
-  final DatabaseReference _foldersRef =
-  FirebaseDatabase.instance.ref().child('FOLDERS/');
-  final DatabaseReference _favouritesRef =
-  FirebaseDatabase.instance.ref().child('FAVOURITES/');
-  // final DatabaseReference foldersRef;
-  // final DatabaseReference shareIdsRef;
-  // final DatabaseReference favouritesRef;
+  final DatabaseReference _plansRef;
+  final DatabaseReference _shareIdsRef;
+  final DatabaseReference _foldersRef;
+  final DatabaseReference _favouritesRef;
   final FirebaseAuth auth;
-  // final ImageService _imageService = ImageService();
+  final ImageService imageService;
 
   PlanRepositoryImpl({
     required this.auth,
-  });
+    DatabaseReference? plansRef,
+    DatabaseReference? shareIdsRef,
+    DatabaseReference? foldersRef,
+    DatabaseReference? favouritesRef,
+    ImageService? imageService,
+  })  : _plansRef = plansRef ?? FirebaseDatabase.instance.ref().child('PLANS/'),
+        _shareIdsRef = shareIdsRef ?? FirebaseDatabase.instance.ref().child('SHARE_IDS/'),
+        _foldersRef = foldersRef ?? FirebaseDatabase.instance.ref().child('FOLDERS/'),
+        _favouritesRef = favouritesRef ?? FirebaseDatabase.instance.ref().child('FAVOURITES/'),
+        imageService = imageService ?? ImageService(); // ✅ in tests you override with MockImageService
 
   @override
   Future<String?> getUserId() async {
