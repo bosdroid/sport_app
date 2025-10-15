@@ -38,25 +38,34 @@ class AiAnalyzerProvider with ChangeNotifier {
   Future<void> analyzeText(String audioText) async {
     _isLoading = true;
     notifyListeners();
-    final now = DateTime.now();
-    final prompt = await aiRepository.fetchPrompt();
-    final userGoals = (await goalRepository.fetchGoals()).map((g) => g.title).toList();
-    final userLogs = (await logRepository.fetchLogs()).map((l) => l.title).toList();
-    final userNotes = await noteRepository.fetchNote(now);
 
-    final finalPrompt = "$prompt\n"
-        "Here is my list of goals: ${userGoals.join(', ')}\n"
-        "Here is my list of logs: ${userLogs.join(', ')}\n"
-        "Audio Text: $audioText\n"
-        "Notes: $userNotes\n"
-        "I need just json result for getting values for update in logs, goals and notes.";
+    try {
+      final now = DateTime.now();
+      final prompt = await aiRepository.fetchPrompt();
+      final userGoals = (await goalRepository.fetchGoals()).map((g) => g.title).toList();
+      final userLogs = (await logRepository.fetchLogs()).map((l) => l.title).toList();
+      final userNotes = await noteRepository.fetchNote(now);
 
-    final response = await aiRepository.sendToAI(finalPrompt);
-    final result = response["choices"][0]["message"]["content"];
+      final finalPrompt = "$prompt\n"
+          "Here is my list of goals: ${userGoals.join(', ')}\n"
+          "Here is my list of logs: ${userLogs.join(', ')}\n"
+          "Audio Text: $audioText\n"
+          "Notes: $userNotes\n"
+          "I need just json result for getting values for update in logs, goals and notes.";
 
-    _aiResponse = await parseAiResult(result);
-    _isLoading = false;
-    notifyListeners();
+      final response = await aiRepository.sendToAI(finalPrompt);
+      final result = response["choices"][0]["message"]["content"];
+
+      _aiResponse = await parseAiResult(result);
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print("Error in analyzeText: $e");
+        print(stack);
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<String> parseAiResult(String result) async {

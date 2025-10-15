@@ -21,6 +21,12 @@ class LogProvider with ChangeNotifier {
   List<LogHistory> get logsHistory => _logsHistory;
   bool get isLoading => _isLoading;
 
+  @visibleForTesting
+  void setLogsHistory(List<LogHistory> history) {
+    _logsHistory = history;
+  }
+
+
   Future<void> getActiveLogsForDate(DateTime? date) async {
     final weekday = date?.weekday ?? DateTime.now().weekday;
     _activeLogs = _logs.where((log) => log.isActive && log.days.contains(weekday)).toList();

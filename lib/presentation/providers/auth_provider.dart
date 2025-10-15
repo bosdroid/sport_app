@@ -22,27 +22,40 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> loginWithEmail(String email, String password) async {
     _setLoading(true);
-    _user = await _repository.loginWithEmail(email, password);
-    _setLoading(false);
+    try {
+      _user = await _repository.loginWithEmail(email, password);
+    } finally {
+      _setLoading(false);
+    }
   }
 
   Future<void> signUpWithEmail(String username, String email, String password) async {
     _setLoading(true);
-    _user = await _repository.signUpWithEmail(username, email, password);
-    _setLoading(false);
+    try {
+      _user = await _repository.signUpWithEmail(username, email, password);
+    } finally {
+      _setLoading(false);
+    }
   }
 
   Future<void> loginWithGoogle() async {
     _setLoading(true);
-    _user = await _repository.loginWithGoogle();
-    _setLoading(false);
+    try {
+      _user = await _repository.loginWithGoogle();
+    } finally {
+      _setLoading(false);
+    }
   }
 
   Future<void> loginWithApple() async {
     _setLoading(true);
-    _user = await _repository.loginWithApple();
-    _setLoading(false);
+    try {
+      _user = await _repository.loginWithApple();
+    } finally {
+      _setLoading(false);
+    }
   }
+
 
   Future<void> logout() async {
     await _repository.logout();

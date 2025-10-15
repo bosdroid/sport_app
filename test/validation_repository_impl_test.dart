@@ -7,7 +7,17 @@ import 'package:bjj_dairy/data/repositories/validation_repository_impl.dart';
 import 'package:bjj_dairy/domain/entities/folder.dart';
 import 'package:bjj_dairy/domain/entities/selected_image.dart';
 
-class FakeXFile extends Fake implements XFile {}
+class FakeXFile extends Fake implements XFile {
+  @override
+  String get path => '/fake/path/image.jpg';
+
+  @override
+  Future<int> length() async => 1024; // e.g., 1 KB fake file
+}
+
+class MockValidator extends Mock {
+  static Future<String?> username(String username) async => null;
+}
 
 void main() {
   late ValidationRepositoryImpl repo;
@@ -48,18 +58,46 @@ void main() {
         Validator.collectionTitle('x', f));
   });
 
-  // test('delegates to Validator.username', () async {
-  //   expect(await repo.validateUsername('bob'),
-  //       await Validator.username('bob'));
-  // });
-  //
-  // test('delegates to Validator.images', () {
-  //   final imgs = [SelectedImage(url: 'u')];
-  //   expect(repo.validateImages(imgs), Validator.images(imgs));
-  // });
-  //
-  // test('delegates to Validator.image', () async {
-  //   final x = FakeXFile();
-  //   expect(await repo.validateImage(x), await Validator.image(x));
-  // });
+  test('delegates to Validator.videoTitle', () {
+    expect(repo.validateVideoTitle('video1'), Validator.videoTitle('video1'));
+  });
+
+  test('delegates to Validator.feedback', () {
+    expect(repo.validateFeedback('Nice app!'), Validator.feedback('Nice app!'));
+  });
+
+  test('delegates to Validator.email', () {
+    expect(repo.validateEmail('test@email.com'), Validator.email('test@email.com'));
+  });
+
+  test('delegates to Validator.password', () {
+    expect(repo.validatePassword('StrongPass1!', true),
+        Validator.password('StrongPass1!', true));
+  });
+
+  test('delegates to Validator.confirmPassword', () {
+    expect(repo.validateConfirmPassword('pass', 'pass'),
+        Validator.confirmPassword('pass', 'pass'));
+  });
+
+  test('delegates to Validator.agreeToTerms', () {
+    expect(repo.validateAgreeTerms(true), Validator.agreeToTerms(true));
+  });
+
+  test('delegates to Validator.username (async)', () async {
+    expect(true, true, reason: 'Skipped due to Firebase dependency');
+  }, skip: true);
+
+
+
+  test('delegates to Validator.images', () {
+    final imgs = [SelectedImage(url: 'u')];
+    expect(repo.validateImages(imgs), Validator.images(imgs));
+  });
+
+  test('delegates to Validator.image (async)', () async {
+    final x = FakeXFile();
+    expect(await repo.validateImage(x), await Validator.image(x));
+  });
+
 }

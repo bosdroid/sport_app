@@ -83,5 +83,97 @@ void main() {
       expect(provider.notes, ["New Note"]);
     });
   });
+
+  group('AiAnalyzerProvider edge cases', () {
+    test('parseAiResult handles missing Logs, Goals, and Notes keys', () async {
+      final result = jsonEncode({});
+      await provider.parseAiResult(result);
+
+      expect(provider.logs, isEmpty);
+      expect(provider.goals, isEmpty);
+      expect(provider.notes, isEmpty);
+    });
+
+    test('parseAiResult skips null or empty values for Logs and Goals', () async {
+      final jsonResult = jsonEncode({
+        "Logs": {"L1": null, "L2": ""},
+        "Goals": {"G1": null, "G2": ""}
+      });
+
+      await provider.parseAiResult(jsonResult);
+
+      verifyNever(() => mockLogRepository.updateLogDataWithAi(any(), any()));
+      verifyNever(() => mockGoalRepository.updateGoalStatusWithAi(any(), any()));
+    });
+
+    test('parseAiResult with empty Notes list should not call addNote', () async {
+      final jsonResult = jsonEncode({
+        "Notes": []
+      });
+
+      await provider.parseAiResult(jsonResult);
+      verifyNever(() => mockNoteRepository.addNote(any()));
+    });
+
+    test('parseAiResult throws FormatException on invalid JSON', () async {
+      expect(() => provider.parseAiResult("invalid json"), throwsA(isA<FormatException>()));
+    });
+
+    test('analyzeText handles exception from sendToAI gracefully', () async {
+      when(() => mockAiRepository.fetchPrompt())
+          .thenAnswer((_) async => "Prompt");
+      when(() => mockGoalRepository.fetchGoals())
+          .thenAnswer((_) async => []);
+      when(() => mockLogRepository.fetchLogs())
+          .thenAnswer((_) async => []);
+      when(() => mockNoteRepository.fetchNote(any()))
+          .thenAnswer((_) async => "Note1");
+      when(() => mockAiRepository.sendToAI(any()))
+          .thenThrow(Exception("AI error"));
+
+      // Watch for state transitions
+      var loadingStates = <bool>[];
+      provider.addListener(() {
+        loadingStates.add(provider.isLoading);
+      });
+
+      await provider.analyzeText("some text");
+
+      // Even on error, should toggle loading correctly
+      expect(loadingStates.first, isTrue);
+      expect(loadingStates.last, isFalse);
+    });
+
+    test('analyzeText builds finalPrompt correctly', () async {
+      when(() => mockAiRepository.fetchPrompt())
+          .thenAnswer((_) async => "Prompt");
+      when(() => mockGoalRepository.fetchGoals())
+          .thenAnswer((_) async => [Goal(id: "1", title: "Goal1", description: "", timestamp: 0)]);
+      when(() => mockLogRepository.fetchLogs())
+          .thenAnswer((_) async => [Log(id: "1", title: "Log1", description: "", type: "Text", timestamp: 0, resetTimestamp: 0)]);
+      when(() => mockNoteRepository.fetchNote(any()))
+          .thenAnswer((_) async => "Note1");
+
+      String? capturedPrompt;
+      when(() => mockAiRepository.sendToAI(captureAny()))
+          .thenAnswer((invocation) async {
+        capturedPrompt = invocation.positionalArguments.first;
+        return {
+          "choices": [
+            {
+              "message": {"content": "{}"}
+            }
+          ]
+        };
+      });
+
+      await provider.analyzeText("Audio text");
+      expect(capturedPrompt, contains("Audio text"));
+      expect(capturedPrompt, contains("Goal1"));
+      expect(capturedPrompt, contains("Log1"));
+      expect(capturedPrompt, contains("Note1"));
+    });
+  });
+
 }
 

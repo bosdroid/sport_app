@@ -560,4 +560,211 @@ void main() {
     });
   });
 
+  group('remaining helpers & error paths', () {
+    late MockDatabaseReference folderRef;
+    late MockDatabaseReference planRef;
+    late MockDatabaseReference commentRef;
+    late MockDataSnapshot snapshot;
+
+    setUp(() {
+      folderRef = MockDatabaseReference();
+      planRef = MockDatabaseReference();
+      commentRef = MockDatabaseReference();
+      snapshot = MockDataSnapshot();
+    });
+
+    test('updateFolderAccess writes specific and clears non-specific', () async {
+      when(() => mockFoldersRef.child('fid')).thenReturn(folderRef);
+      when(() => folderRef.update(any())).thenAnswer((_) async {});
+
+      await repo.updateFolderAccess('fid', 'specific', allowedUsers: ['u1']);
+      verify(() => folderRef.update({'access': 'specific', 'allowedUsers': ['u1']})).called(1);
+
+      await repo.updateFolderAccess('fid', 'public');
+      verify(() => folderRef.update({'access': 'public', 'allowedUsers': []})).called(1);
+    });
+
+    test('addShareIdIfMissing skips when shareId already exists', () async {
+      when(() => mockFoldersRef.child('fid')).thenReturn(folderRef);
+      when(() => folderRef.child('shareId')).thenReturn(folderRef);
+      when(() => folderRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(true);
+      when(() => snapshot.value).thenReturn('existingSid');
+
+      await repo.addShareIdIfMissing('fid', 'newSid');
+      verifyNever(() => folderRef.update(any()));
+    });
+
+    test('fetchFolders returns [] when snapshot missing', () async {
+      when(() => mockFoldersRef.orderByChild(any())).thenReturn(mockFoldersRef);
+      when(() => mockFoldersRef.equalTo(any())).thenReturn(mockFoldersRef);
+      when(() => mockFoldersRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(false);
+
+      final res = await repo.fetchFolders('u');
+      expect(res, isEmpty);
+    });
+
+    test('fetchFoldersByShareId returns [] when invalid', () async {
+      when(() => mockFoldersRef.orderByChild(any())).thenReturn(mockFoldersRef);
+      when(() => mockFoldersRef.equalTo(any())).thenReturn(mockFoldersRef);
+      when(() => mockFoldersRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(false);
+
+      final res = await repo.fetchFoldersByShareId('sid');
+      expect(res, isEmpty);
+    });
+
+    test('findByName returns null when no match', () async {
+      when(() => mockFoldersRef.orderByChild(any())).thenReturn(mockFoldersRef);
+      when(() => mockFoldersRef.equalTo(any())).thenReturn(mockFoldersRef);
+      when(() => mockFoldersRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(true);
+      when(() => snapshot.value).thenReturn({
+        'x': {'name': 'Different'}
+      });
+
+      final res = await repo.findByName('u', 'Target');
+      expect(res, isNull);
+    });
+
+    test('getUserId returns null when prefs missing key', () async {
+      when(() => mockAuth.currentUser).thenReturn(MockUser());
+      SharedPreferences.setMockInitialValues({}); // remove key
+      final res = await repo.getUserId();
+      expect(res, isNull);
+    });
+
+    test('fetchPlansByUserId returns [] when snapshot not map', () async {
+      when(() => mockPlansRef.orderByChild(any())).thenReturn(mockPlansRef);
+      when(() => mockPlansRef.equalTo(any())).thenReturn(mockPlansRef);
+      when(() => mockPlansRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(true);
+      when(() => snapshot.value).thenReturn('notMap');
+
+      final res = await repo.fetchPlansByUserId('u');
+      expect(res, isEmpty);
+    });
+
+    test('fetchFavouritesByUserId skips invalid favourite and plan', () async {
+      final favMap = {
+        'k1': {'id': 'f1', 'userId': 'u', 'planId': ''}
+      };
+      when(() => mockFavouritesRef.orderByChild(any())).thenReturn(mockFavouritesRef);
+      when(() => mockFavouritesRef.equalTo(any())).thenReturn(mockFavouritesRef);
+      when(() => mockFavouritesRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(true);
+      when(() => snapshot.value).thenReturn(favMap);
+
+      final res = await repo.fetchFavouritesByUserId('u');
+      expect(res, isEmpty);
+    });
+
+    test('updatePlanStatus and updateNote call update correctly', () async {
+      when(() => mockPlansRef.child('p1')).thenReturn(planRef);
+      when(() => planRef.update(any())).thenAnswer((_) async {});
+
+      await repo.updatePlanStatus('p1', 'done');
+      verify(() => planRef.update({'status': 'done'})).called(1);
+
+      await repo.updateNote('p1', 'note');
+      verify(() => planRef.update({'note': 'note'})).called(1);
+    });
+
+    test('updateFolderName and updateFolderOrder perform single updates', () async {
+      when(() => mockFoldersRef.child('fid')).thenReturn(folderRef);
+      when(() => folderRef.update(any())).thenAnswer((_) async {});
+
+      await repo.updateFolderName('fid', 'NewName');
+      verify(() => folderRef.update({'name': 'NewName'})).called(1);
+
+      await repo.updateFolderOrder('fid', 2);
+      verify(() => folderRef.update({'order': 2})).called(1);
+    });
+
+    test('updateLikedBy and updateFavouritedBy perform array writes', () async {
+      when(() => mockPlansRef.child('pid')).thenReturn(planRef);
+      when(() => planRef.update(any())).thenAnswer((_) async {});
+
+      await repo.updateLikedBy('pid', ['a']);
+      await repo.updateFavouritedBy('pid', ['a']);
+      verify(() => planRef.update({'likedBy': ['a']})).called(1);
+      verify(() => planRef.update({'favouritedBy': ['a']})).called(1);
+    });
+
+    test('removeFavouriteByPlanId removes matching entry only', () async {
+      when(() => mockFavouritesRef.orderByChild('userId')).thenReturn(mockFavouritesRef);
+      when(() => mockFavouritesRef.equalTo('u')).thenReturn(mockFavouritesRef);
+      when(() => mockFavouritesRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(true);
+      when(() => snapshot.value).thenReturn({
+        'a': {'planId': 'x'},
+        'b': {'planId': 'target'}
+      });
+
+      final favRef = MockDatabaseReference();
+      when(() => mockFavouritesRef.child('b')).thenReturn(favRef);
+      when(() => favRef.remove()).thenAnswer((_) async {});
+
+      await repo.removeFavouriteByPlanId('u', 'target');
+      verify(() => favRef.remove()).called(1);
+    });
+
+    test('addComment and deleteComment perform correct writes', () async {
+      // 🔹 Mock the chain of DatabaseReferences
+      final commentsRef = MockDatabaseReference();
+      final commentRef = MockDatabaseReference();
+
+      // addComment path: _plansRef.child('$planId/comments').child(comment.id)
+      when(() => mockPlansRef.child('pid/comments')).thenReturn(commentsRef);
+      when(() => commentsRef.child('cid')).thenReturn(commentRef);
+      when(() => commentRef.set(any())).thenAnswer((_) async {});
+
+      // deleteComment path: _plansRef.child('$planId/comments/$commentId')
+      when(() => mockPlansRef.child('pid/comments/cid')).thenReturn(commentRef);
+      when(() => commentRef.remove()).thenAnswer((_) async {});
+
+      // Execute
+      await repo.addComment(
+        'pid',
+        Comment(
+          id: 'cid',
+          userId: 'u',
+          username: 'tester',
+          text: 'hi',
+          timestamp: 1,
+        ),
+      );
+
+      await repo.deleteComment('pid', 'cid');
+
+      // Verify both DB operations executed once
+      verify(() => commentRef.set(any())).called(1);
+      verify(() => commentRef.remove()).called(1);
+    });
+
+
+    test('clearFolderFromPlans iterates and clears', () async {
+      when(() => mockPlansRef.orderByChild(any())).thenReturn(mockPlansRef);
+      when(() => mockPlansRef.equalTo(any())).thenReturn(mockPlansRef);
+      when(() => mockPlansRef.get()).thenAnswer((_) async => snapshot);
+      when(() => snapshot.exists).thenReturn(true);
+      when(() => snapshot.value).thenReturn({
+        'p1': {'folderId': 'fid'},
+        'p2': {'folderId': 'fid'},
+      });
+      final planRef1 = MockDatabaseReference();
+      when(() => mockPlansRef.child('p1')).thenReturn(planRef1);
+      when(() => planRef1.update(any())).thenAnswer((_) async {});
+      final planRef2 = MockDatabaseReference();
+      when(() => mockPlansRef.child('p2')).thenReturn(planRef2);
+      when(() => planRef2.update(any())).thenAnswer((_) async {});
+
+      await repo.clearFolderFromPlans('u', 'fid');
+
+      verify(() => planRef1.update({'folderId': ''})).called(1);
+      verify(() => planRef2.update({'folderId': ''})).called(1);
+    });
+  });
+
 }

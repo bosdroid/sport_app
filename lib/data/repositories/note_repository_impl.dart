@@ -15,7 +15,7 @@ class NoteRepositoryImpl implements NoteRepository {
   }
 
   @override
-  Future<String> fetchNote(DateTime? dateTime) async {
+  Future<String> fetchNote([DateTime? dateTime]) async {
     final userId = await _getUserId();
     if (userId == null) return "";
 
@@ -27,9 +27,20 @@ class NoteRepositoryImpl implements NoteRepository {
       return "";
     }
 
-    final data = snapshot.value as Map<dynamic, dynamic>;
-    return data['note'] as String? ?? "";
+    final value = snapshot.value;
+    if (value is! Map) {
+      return "";
+    }
+
+    final data = value as Map<dynamic, dynamic>;
+    final note = data['note'];
+    if (note is! String || note.isEmpty) {
+      return "";
+    }
+
+    return note;
   }
+
 
   @override
   Future<void> addNote(String text, {DateTime? targetDate}) async {

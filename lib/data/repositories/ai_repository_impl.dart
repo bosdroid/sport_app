@@ -8,11 +8,13 @@ import '../../domain/repositories/ai_repository.dart';
 class AiRepositoryImpl implements AiRepository {
   final DatabaseReference promptRef;
   final DatabaseReference notesRef;
+  final http.Client httpClient; // ✅ injectable
 
   AiRepositoryImpl({
     required this.promptRef,
     required this.notesRef,
-  });
+    http.Client? httpClient,
+  }) : httpClient = httpClient ?? http.Client();
 
   @override
   Future<String> fetchPrompt() async {
@@ -53,19 +55,19 @@ class AiRepositoryImpl implements AiRepository {
 
   @override
   Future<List<String>> fetchUserNotes(String userId) async {
-    final userNotesRef = notesRef.child(userId);
-    final snapshot = await userNotesRef.get();
+    final userRef = notesRef.child(userId);
+    final snapshot = await userRef.get();
 
-    List<String> notes = [];
-    if (snapshot.exists) {
-      for (var dateSnapshot in snapshot.children) {
-        for (var noteSnapshot in dateSnapshot.children) {
-          if (noteSnapshot.key == 'note') {
-            notes.add(noteSnapshot.value.toString());
-          }
-        }
+    if (!snapshot.exists) return [];
+
+    final notes = <String>[];
+    for (final dateSnap in snapshot.children) {
+      for (final noteSnap in dateSnap.children) {
+        final value = noteSnap.value;
+        if (value != null) notes.add(value.toString());
       }
     }
     return notes;
   }
+
 }

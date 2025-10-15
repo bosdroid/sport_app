@@ -47,7 +47,7 @@ class LogRepositoryImpl implements LogRepository {
               : log.resetTimestamp ?? 0);
       final now = DateTime.now();
 
-      if (_isNewDay(lastResetDate, now)) {
+      if (isNewDay(lastResetDate, now)) {
         log = log.resetValues();
         await logRef.child(userId).child(log.id).set(log.toMap());
       }
@@ -156,7 +156,7 @@ class LogRepositoryImpl implements LogRepository {
 
     final creationDate = DateTime.fromMillisecondsSinceEpoch(log.timestamp);
     final currentDate = DateTime.now();
-    final allDates = _getDatesBetween(creationDate, currentDate);
+    final allDates = getDatesBetween(creationDate, currentDate);
 
     final snapshot = await historyRef.child("$userId/${log.id}").get();
     Map<int, LogHistory> map = {};
@@ -167,13 +167,13 @@ class LogRepositoryImpl implements LogRepository {
         final value = Map<String, dynamic>.from(entry.value as Map);
         final logHistory = LogHistory.fromMap(value, entry.key);
         final date = DateTime.fromMillisecondsSinceEpoch(logHistory.timestamp);
-        final normalized = _getStartOfDay(date).millisecondsSinceEpoch;
+        final normalized = getStartOfDay(date).millisecondsSinceEpoch;
         map[normalized] = logHistory;
       }
     }
 
     return allDates.map((date) {
-      final normalized = _getStartOfDay(date).millisecondsSinceEpoch;
+      final normalized = getStartOfDay(date).millisecondsSinceEpoch;
       return map[normalized] ?? LogHistory.empty(normalized);
     }).toList();
   }
@@ -212,10 +212,10 @@ class LogRepositoryImpl implements LogRepository {
   }
 
   // Helpers
-  bool _isNewDay(DateTime lastReset, DateTime current) =>
+  bool isNewDay(DateTime lastReset, DateTime current) =>
       lastReset.year != current.year || lastReset.month != current.month || lastReset.day != current.day;
 
-  List<DateTime> _getDatesBetween(DateTime start, DateTime end) {
+  List<DateTime> getDatesBetween(DateTime start, DateTime end) {
     List<DateTime> dates = [];
     DateTime current = start;
     while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
@@ -225,7 +225,7 @@ class LogRepositoryImpl implements LogRepository {
     return dates;
   }
 
-  DateTime _getStartOfDay(DateTime date) => DateTime(date.year, date.month, date.day);
+  DateTime getStartOfDay(DateTime date) => DateTime(date.year, date.month, date.day);
 
   @override
   Future<void> updateLogDataWithAi(String title, dynamic value) async {
