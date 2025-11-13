@@ -157,6 +157,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                     text: AppStrings.loginWithApple,
                   ),
+                SizedBox(height: 16,),
+                // Guest login option
+                PrimaryButton(
+                  onPressed: () async {
+                    try {
+                      await authProvider.loginAsGuest();
+                      if (!context.mounted) return;
+                      Navigator.pushReplacementNamed(context, RoutesNames.homeScreen);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to continue as guest. Please try again.')),
+                      );
+                    }
+                  },
+                  text: 'Continue as Guest',
+                ),
                 SizedBox(height: 16),
                 TextButton(
                   onPressed: () {

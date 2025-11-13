@@ -10,7 +10,11 @@ import '../presentation/providers/validation_provider.dart';
 
 
 class Util {
-
+  static final String ownerUserId = 's0xYtLlXrxMER1rljV0A67AWMbX2';
+  static final String ownerUserName = 'user002';
+  static final String ownerDefaultFolderId = '-ObIV6K9rUs8rPIQEOJi';
+  static final String ownerDefaultCardId = '-ObIV21b0HdoKzj7brfr';
+  static bool isUserLogged = false;
   static String generateRandomShareId({int length = 6}) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     final rand = Random();

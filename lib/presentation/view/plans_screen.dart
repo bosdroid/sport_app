@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bjj_dairy/core/app_analytics.dart';
 import 'package:bjj_dairy/presentation/view/pdf_export_screen.dart';
 import 'package:bjj_dairy/presentation/view/plan_detail_screen.dart';
 import 'package:bjj_dairy/route_observer.dart';
@@ -8,8 +9,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:in_app_review/in_app_review.dart';
+import 'package:restart_app/restart_app.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_strings.dart';
 import '../../core/routes/routes_names.dart';
@@ -54,14 +57,31 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
       await Provider.of<PlanProvider>(context, listen: false).fetchPlans();
       await Provider.of<PlanProvider>(context, listen: false).fetchFavouritesPlans();
       final appProvider = Provider.of<AppProvider>(context, listen: false);
+      await appProvider.fetchLimits();
       await appProvider.fetchAndSaveVideos();  // Then update from Firebase
       await appProvider.loadVideosFromPrefs(); // Load locally first
       await FirebaseMessaging.instance.getToken().then((token) {
         _usersDetailsRef.child(Provider.of<PlanProvider>(context, listen: false).loggedUserId)
             .update({'fcmToken': token});
       });
+      // 🟩 Step 4: Check for guest session
+      await _handleGuestSession();
     });
   }
+
+  Future<void> _handleGuestSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loginType = prefs.getString('login_type') ?? 'guest';
+    final guestId = prefs.getString('guest_id');
+
+    if (loginType == 'guest') {
+      // 🟩 If user has an old guest ID, show login prompt
+      if (guestId != null && guestId.isNotEmpty && mounted) {
+        showLoginPrompt(context);
+      }
+    }
+  }
+
 
   @override
   void didChangeDependencies() {
@@ -288,7 +308,7 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
 
                   showFolderSelectionBottomSheet(
                     context,
-                    planProvider.folders,
+                    planProvider.folders.where((folder)=> folder.userId != Util.ownerUserName).toList(),
                     (selectedFolderId) {
                       planProvider.addPlanToCollection(
                           plan.id, selectedFolderId);
@@ -574,9 +594,144 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
     );
   }
 
+  void showRegistrationPrompt(BuildContext context, {required String type}) {
+    // type can be "collection" or "technique"
+    final String titleText = type == "collection"
+        ? "You’ve reached the limit for guest user.\nRegister to unlock unlimited collections."
+        : "You’ve reached the limit for guest user.\nRegister to unlock unlimited techniques.";
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 16, left: 20, right: 20, bottom: 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 24),
+                  const Text(
+                    'Registration Required',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 12),
+              Text(
+                titleText,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, RoutesNames.loginScreen); // Adjust to your route
+                },
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Register Now'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void showLoginPrompt(BuildContext context) {
+    const String titleText = "Do you want to login your existing account";
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 12, left: 20, right: 20, bottom: 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 🟩 Top row with title centered and close icon on right
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Center(
+                    child: Text(
+                      'Existing Login Warning!',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, size: 22),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
+              ),
+
+              const Divider(),
+              const SizedBox(height: 12),
+
+              // 🟩 Message
+              Text(
+                titleText,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 20),
+
+              // 🟩 Login button
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, RoutesNames.loginScreen);
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('Login Now'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
+    final appProvider = Provider.of<AppProvider>(context, listen: true);
     final authProvider = Provider.of<AuthProvider>(context,listen: true);
 
     return WillPopScope(
@@ -636,7 +791,14 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
                 await planProvider.resetLoggedId();
                 await authProvider.logout();
                 if (!context.mounted) return;
+                // restart app (clears all provider state)
+                Restart.restartApp(notificationBody: 'Please wait...');
                 Navigator.pushReplacementNamed(
+                    context, RoutesNames.homeScreen);
+                break;
+              case 'login':
+                if (!context.mounted) return;
+                Navigator.pushNamed(
                     context, RoutesNames.loginScreen);
                 break;
               case 'privacy':
@@ -757,7 +919,7 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
                         onReorder: (oldIndex, newIndex) {
                           // Prevent reordering if AddCollectionCard is involved
                           if (oldIndex >= planProvider.folders.length ||
-                              newIndex > planProvider.folders.length - 1 || planProvider.loggedUserId != planProvider.folders[oldIndex].userId) {
+                              newIndex > planProvider.folders.length - 1 || planProvider.loggedUserId != planProvider.folders[oldIndex].userId || Util.ownerUserName != planProvider.folders[oldIndex].userId) {
                             return; // Do nothing if trying to reorder the AddCollectionCard
                           }
                           planProvider.reorderFolders(oldIndex, newIndex);
@@ -771,28 +933,97 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
                               key: ValueKey(collection.id),
                               // 🔑 Required key for reordering
                               margin: const EdgeInsets.symmetric(horizontal: 8),
-                              child: CollectionCard(
-                                folder: collection,
-                                count: planProvider
-                                    .getPlanCountForFolder(collection),
-                                userId: planProvider.loggedUserId,
-                                onTap: () {
-                                  planProvider.filterPlans("", null);
-                                  planProvider.applyTagFilter([], null);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => FolderPlansScreen(
-                                        folderId: collection.id!,isShared:
-                                      false,),
-                                    ),
-                                  );
+                              child:
+                              // CollectionCard(
+                              //   folder: collection,
+                              //   count: planProvider
+                              //       .getPlanCountForFolder(collection),
+                              //   userId: planProvider.loggedUserId,
+                              //   onTap: () {
+                              //     planProvider.filterPlans("", null);
+                              //     planProvider.applyTagFilter([], null);
+                              //     Navigator.push(
+                              //       context,
+                              //       MaterialPageRoute(
+                              //         builder: (_) => FolderPlansScreen(
+                              //           folderId: collection.id!,isShared:
+                              //         collection.userId == Util.ownerUserName ? true : false,),
+                              //       ),
+                              //     );
+                              //   },
+                              //   onMore: () {
+                              //     showCollectionOptions(
+                              //         context, collection, planProvider);
+                              //   },
+                              // ),
+                              FutureBuilder<int>(
+                                future: planProvider.getPlanCountForFolder(collection), // 👈 async function
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                    return CollectionCard(
+                                      folder: collection,
+                                      count: 0, // or show loader icon inside the card
+                                      userId: planProvider.loggedUserId,
+                                      onTap: () async {
+                                        planProvider.filterPlans("", null);
+                                        planProvider.applyTagFilter([], null);
+                                        if(Util.ownerUserName == collection.userId && !Util.isUserLogged){
+                                          AppAnalytics.logDemoCollection();
+                                        }
+                                        // // ⛔ Add delay for animation
+                                        // await Future.delayed(const Duration(milliseconds: 100));
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => FolderPlansScreen(
+                                              folderId: collection.id!,
+                                              isShared: collection.userId == Util.ownerUserName,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      onMore: () {
+                                        showCollectionOptions(context, collection, planProvider);
+                                      },
+                                    );
+                                  } else if (snapshot.hasError) {
+                                    return CollectionCard(
+                                      folder: collection,
+                                      count: 0, // or show an error icon
+                                      userId: planProvider.loggedUserId,
+                                      onTap: () { /* same as above */ },
+                                      onMore: () {
+                                        showCollectionOptions(context, collection, planProvider);
+                                      },
+                                    );
+                                  } else {
+                                    return CollectionCard(
+                                      folder: collection,
+                                      count: snapshot.data ?? 0,
+                                      userId: planProvider.loggedUserId,
+                                      onTap: () {
+                                        planProvider.filterPlans("", null);
+                                        planProvider.applyTagFilter([], null);
+                                        if(Util.ownerUserName != collection.userId && planProvider.loggedUserId != Util.ownerUserName){
+                                          AppAnalytics.logDemoCollection();
+                                        }
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => FolderPlansScreen(
+                                              folderId: collection.id!,
+                                              isShared: collection.userId == Util.ownerUserName,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      onMore: () {
+                                        showCollectionOptions(context, collection, planProvider);
+                                      },
+                                    );
+                                  }
                                 },
-                                onMore: () {
-                                  showCollectionOptions(
-                                      context, collection, planProvider);
-                                },
-                              ),
+                              )
                             );
                           } else {
                             // AddCollectionCard with a fixed key, not draggable
@@ -800,8 +1031,20 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
                               key: const ValueKey('add_card'),
                               margin: const EdgeInsets.symmetric(horizontal: 8),
                               child: AddCollectionCard(
-                                onTap: () => _showCreateCollectionDialog(
-                                    planProvider, context),
+                                onTap: () async {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  final String loginType = prefs.getString('login_type') ?? '';
+                                  if (loginType != '' && loginType == 'guest') {
+                                    List<Folder> folders = planProvider.folders;
+                                    final int foldersCount = folders.where((folder) => folder.userId != Util.ownerUserName).length;
+                                    if(foldersCount == appProvider.limits?.maxFoldersForGuest){
+                                      showRegistrationPrompt(context, type: "collection");
+                                      return;
+                                    }
+                                  }
+                                  _showCreateCollectionDialog(
+                                      planProvider, context);
+                                },
                               ),
                             );
                           }
@@ -829,7 +1072,7 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
                 child: planProvider.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : planProvider.plans
-                            .where((plan) => plan.folderId.isEmpty && plan.userId == planProvider.loggedUserId)
+                            .where((plan) => plan.folderId.isEmpty && (plan.userId == planProvider.loggedUserId || plan.userId == Util.ownerUserName))
                             .isEmpty
                         ? Center(
                             child: Padding(
@@ -855,7 +1098,7 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
                                         fontWeight: FontWeight.bold)),
                               ),
                               ...planProvider.plans
-                                  .where((plan) => plan.folderId.isEmpty && plan.userId == planProvider.loggedUserId)
+                                  .where((plan) => plan.folderId.isEmpty && (plan.userId == planProvider.loggedUserId || plan.userId == Util.ownerUserName))
                                   .map(
                                     (plan) => TechniqueCard(
                                       plan: plan,
@@ -921,6 +1164,16 @@ class _PlansScreenState extends State<PlansScreen> with RouteAware, WidgetsBindi
               foregroundColor: Colors.white,
               mini: true,
               onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                 final String loginType = prefs.getString('login_type') ?? '';
+                 if (loginType != '' && loginType == 'guest') {
+                   List<Plan> plans = planProvider.plans;
+                   final int plansCount = plans.where((plan) => plan.userId != Util.ownerUserName).length;
+                   if(plansCount == appProvider.limits?.maxCardsForGuest){
+                     showRegistrationPrompt(context, type: "technique");
+                     return;
+                   }
+                 }
                 //FirebaseCrashlytics.instance.crash();
                 await Navigator.pushNamed(
                   context,

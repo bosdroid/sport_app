@@ -183,7 +183,12 @@ class PlanProvider with ChangeNotifier {
     return ['All', ...allTags];
   }
 
-  int getPlanCountForFolder(Folder folder) {
+  Future<int> getPlanCountForFolder(Folder folder) async {
+    if(folder.userId == Util.ownerUserName){
+      List<Plan> ownerPlans = await _planRepository.fetchPlansByUserId(Util.ownerUserName);
+      final int plansCount = ownerPlans.where((plan) => plan.folderId == folder.id).length;
+      return plansCount;
+    }
     if (folder.name!.toLowerCase() == 'favourites') {
       return _allPlans.where((plan) => plan.folderId == folder.id).length + _favouritesPlans.length;
     } else {
@@ -295,16 +300,33 @@ class PlanProvider with ChangeNotifier {
   Future<void> fetchFolders() async {
     final prefs = await SharedPreferences.getInstance();
     final String userId = await _planRepository.getUserId() as String;//prefs.getString('user_name') ?? '';
-
-    // ✅ Fetch folders using repository
+    final String loginType = prefs.getString('login_type') ?? '';
+    final String defaultFolder = prefs.getString('default_folder') ?? '';
+    // ✅ Fetch folders using repository default_folder
     List<Folder> fetched = await _planRepository.fetchFolders(userId);
+
+    // 2️⃣ If guest, also fetch one "Default Folder" from owner's folders
+    if (loginType == 'guest' && defaultFolder == '') {
+      List<Folder> ownerFolders = await _planRepository.fetchFolders(Util.ownerUserName);
+
+      // Find only the folder named "Default Folder" (case-insensitive)
+      final Folder? defaultFolder = ownerFolders.firstWhere(
+            (f) => (f.id == Util.ownerDefaultFolderId),
+        orElse: () => Folder(id: null, name: null),
+      );
+
+      // Add to guest’s fetched list if found and valid
+      if (defaultFolder?.id != null && defaultFolder?.name != null) {
+        fetched.insert(0,defaultFolder!);
+      }
+    }
 
     // ── 1. Check for Favourites folder ─────────────────────
     bool hasFavourites = fetched.any(
           (f) => (f.name?.toLowerCase() == 'favourites'),
     );
 
-    if (!hasFavourites) {
+    if (!hasFavourites && loginType != 'guest') {
       await _createDefaultFavouritesFolder(userId);
     }
 
@@ -772,9 +794,10 @@ class PlanProvider with ChangeNotifier {
   Future<void> fetchShareFolderPlans(String folderId) async {
     _isLoading = true;
     notifyListeners();
-
+    final prefs = await SharedPreferences.getInstance();
+    final loginType = prefs.getString('login_type') ?? '';
     final user = _auth.currentUser;
-    if (user == null) {
+    if (user == null && (loginType == '' || loginType != 'guest') ) {
       _sharedFolderPlans = [];
       _isLoading = false;
       notifyListeners();
@@ -784,8 +807,7 @@ class PlanProvider with ChangeNotifier {
     final List<Plan> allPlans = [];
 
     try {
-      final snapshot =
-      await _plansRef.orderByChild('folderId').equalTo(folderId).get();
+      final snapshot = await _plansRef.orderByChild('folderId').equalTo(folderId).get();
 
       if (!snapshot.exists || snapshot.value == null) {
         debugPrint("No plans found for folder: $folderId");
@@ -806,7 +828,9 @@ class PlanProvider with ChangeNotifier {
         if (value is Map<Object?, Object?>) {
           final data = value.map((k, v) => MapEntry(k.toString(), v));
           final plan = Plan.fromMap(data);
-
+          if(plan.userId == Util.ownerUserName){
+            plan.isShared = true;
+          }
           allPlans.add(plan);
           debugPrint("Fetched Plan: ${plan.id}");
         }
@@ -828,8 +852,8 @@ class PlanProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final user = _auth.currentUser;
-    if (user == null) return null;
+    // final user = _auth.currentUser;
+    // if (user == null) return null;
 
     final Set<String> loadedPlanIds = {}; // Tracks connected plan IDs
     final List<Plan> allPlans = [];
@@ -963,11 +987,13 @@ class PlanProvider with ChangeNotifier {
   }
 
   Future<void> fetchPlans() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    // final user = _auth.currentUser;
+    // if (user == null) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final String userId = await _planRepository.getUserId() as String;//prefs.getString("user_name") ?? '';
+    final String userId = await _planRepository.getUserId() ?? '';//prefs.getString("user_name") ?? '';
+    final String loginType = prefs.getString('login_type') ?? '';
+    final String defaultCard = prefs.getString('default_card') ?? '';
     _loggedUserId = userId;
 
     _isLoading = true;
@@ -979,7 +1005,40 @@ class PlanProvider with ChangeNotifier {
     try {
       final fetchedPlans = await _planRepository.fetchPlansByUserId(userId);
 
+      // 2️⃣ If guest, fetch owner’s default plan
+      if (loginType == 'guest' && defaultCard == '') {
+        List<Plan> ownerPlans = await _planRepository.fetchPlansByUserId(Util.ownerUserName);
+
+// Safely find “Default card”
+        Plan? defaultPlan;
+        try {
+          defaultPlan = ownerPlans.firstWhere(
+                (p) => p.id == Util.ownerDefaultCardId,
+          );
+        } catch (_) {
+          defaultPlan = null;
+        }
+        // Add to guest’s list if valid
+        if (defaultPlan != null) {
+          defaultPlan.isShared = true;
+          fetchedPlans.add(defaultPlan);
+        }
+      }
+
       _plans = fetchedPlans;
+      _plans.sort((a, b) {
+        // If 'a' is the owner's plan, it goes on top
+        if (a.userId == Util.ownerUserName && b.userId != Util.ownerUserName) {
+          return -1;
+        }
+        // If 'b' is the owner's plan, it goes on top
+        else if (b.userId == Util.ownerUserName && a.userId != Util.ownerUserName) {
+          return 1;
+        }
+        // Otherwise, sort by timestamp descending
+        return b.timestamp.compareTo(a.timestamp);
+      });
+
       _allPlans.addAll(fetchedPlans);
 
       updateAllTags();
@@ -994,8 +1053,8 @@ class PlanProvider with ChangeNotifier {
   }
 
   Future<void> fetchFavouritesPlans() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    // final user = _auth.currentUser;
+    // if (user == null) return;
 
     final prefs = await SharedPreferences.getInstance();
     final String userId = await _planRepository.getUserId() as String;//prefs.getString("user_name") ?? '';
@@ -1118,8 +1177,8 @@ class PlanProvider with ChangeNotifier {
   }
 
   Future<void> updatePlanStatus(Plan plan, String value) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    // final user = _auth.currentUser;
+    // if (user == null) return;
 
     _isLoading = true;
     notifyListeners();
@@ -1156,8 +1215,8 @@ class PlanProvider with ChangeNotifier {
   }
 
   Future<void> addPlan({required String title, required String description, required List<VideoEntry> videos, required List<String> tags, String? parentId, required bool isConnection, String? collectionId,}) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    // final user = _auth.currentUser;
+    // if (user == null) return;
 
     _isLoading = true;
     notifyListeners();
@@ -1198,7 +1257,18 @@ class PlanProvider with ChangeNotifier {
       // ✅ Local state update
       _plans.add(newPlan);
       AppAnalytics.logCardCreated(planId);
-      _plans.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      _plans.sort((a, b) {
+        // If 'a' is the owner's plan, it goes on top
+        if (a.userId == Util.ownerUserName && b.userId != Util.ownerUserName) {
+          return -1;
+        }
+        // If 'b' is the owner's plan, it goes on top
+        else if (b.userId == Util.ownerUserName && a.userId != Util.ownerUserName) {
+          return 1;
+        }
+        // Otherwise, sort by timestamp descending
+        return b.timestamp.compareTo(a.timestamp);
+      });
       _allPlans
         ..clear()
         ..addAll(_plans);
@@ -1215,8 +1285,8 @@ class PlanProvider with ChangeNotifier {
   }
 
   Future<void> updatePlan(Plan updatedPlan) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    // final user = _auth.currentUser;
+    // if (user == null) return;
 
     _isLoading = true;
     notifyListeners();
@@ -1271,18 +1341,78 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
-  Future<Plan?> updatedPlan(Plan updatedPlan) async {
-    final user = _auth.currentUser;
-    if (user == null) return null;
+  // Future<Plan?> updatedPlan(Plan updatedPlan) async {
+  //   // final user = _auth.currentUser;
+  //   // if (user == null) return null;
+  //
+  //   _isLoading = true;
+  //   notifyListeners();
+  //
+  //   try {
+  //     // ✅ Start with existing images
+  //     List<String> uploadedImageUrls = List.from(updatedPlan.images);
+  //
+  //     if (_selectedImages.isNotEmpty) {
+  //       final localImages =
+  //       _selectedImages.where((img) => img.localFile != null).toList();
+  //       final firebaseImages =
+  //       _selectedImages.where((img) => img.url != null).toList();
+  //
+  //       // Upload new local images
+  //       final newUploadedUrls = localImages.isNotEmpty
+  //           ? await _imageService.uploadImages(localImages)
+  //           : [];
+  //
+  //       // ✅ Merge old + firebase + new (avoid duplicates)
+  //       uploadedImageUrls = ({
+  //         ...uploadedImageUrls,
+  //         ...firebaseImages.map((img) => img.url!),
+  //         ...newUploadedUrls,
+  //       }).toList().cast<String>();
+  //     }
+  //
+  //     _finalUploadImages = uploadedImageUrls;
+  //
+  //     // ✅ Create updated plan
+  //     final newPlan = updatedPlan.copyWith(images: uploadedImageUrls);
+  //
+  //     // ✅ Save to Firebase via repository
+  //     await _planRepository.updatePlan(newPlan);
+  //
+  //     // ✅ Update local state
+  //     final index = _plans.indexWhere((plan) => plan.id == newPlan.id);
+  //     if (index != -1) {
+  //       _plans[index] = newPlan;
+  //       _allPlans
+  //         ..clear()
+  //         ..addAll(_plans);
+  //     }
+  //
+  //     AppAnalytics.logCardEdited(newPlan.id);
+  //     resetVideoEntries();
+  //     updateAllTags();
+  //
+  //     return newPlan;
+  //   } catch (e) {
+  //     debugPrint("🔥 Error updating plan: $e");
+  //     return null;
+  //   } finally {
+  //     _isLoading = false;
+  //     notifyListeners();
+  //   }
+  // }
 
+  Future<Plan?> updatedPlan(Plan updatedPlan) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // ✅ Start with existing images
-      List<String> uploadedImageUrls = List.from(updatedPlan.images);
+      List<String> uploadedImageUrls = [];
 
-      if (_selectedImages.isNotEmpty) {
+      // ✅ If no images selected, keep existing ones
+      if (_selectedImages.isEmpty) {
+        uploadedImageUrls = updatedPlan.images;
+      } else {
         final localImages =
         _selectedImages.where((img) => img.localFile != null).toList();
         final firebaseImages =
@@ -1293,12 +1423,11 @@ class PlanProvider with ChangeNotifier {
             ? await _imageService.uploadImages(localImages)
             : [];
 
-        // ✅ Merge old + firebase + new (avoid duplicates)
-        uploadedImageUrls = ({
-          ...uploadedImageUrls,
+        // ✅ Combine Firebase URLs (existing) + newly uploaded URLs
+        uploadedImageUrls = [
           ...firebaseImages.map((img) => img.url!),
           ...newUploadedUrls,
-        }).toList().cast<String>();
+        ];
       }
 
       _finalUploadImages = uploadedImageUrls;
@@ -1332,9 +1461,10 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
+
   Future<void> updatePlanNote(String planId, String note) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    // final user = _auth.currentUser;
+    // if (user == null) return;
 
     _isLoading = true;
     notifyListeners();
@@ -1360,8 +1490,8 @@ class PlanProvider with ChangeNotifier {
   }
 
   Future<void> deletePlan(String planId) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    // final user = _auth.currentUser;
+    // if (user == null) return;
 
     _isLoading = true;
     notifyListeners();
@@ -1509,6 +1639,26 @@ class PlanProvider with ChangeNotifier {
     }
   }
 
+  Future<void> hideDefaultFolderOrCard({required int type}) async {
+   await _planRepository.hideDefaultFolderOrCard(
+       type: type
+    );
+    if(type == 0){
+      _folders.removeWhere((folder) => folder.userId == Util.ownerUserName);
+      notifyListeners();
+    }
+    else{
+     _plans.removeWhere((plan) => plan.userId == Util.ownerUserName);
+
+// ✅ Update the master list
+      _allPlans
+        ..clear()
+        ..addAll(_plans);
+      updateAllTags();
+    }
+
+  }
+
   List<Plan> getParentPlans(String planId,bool isShared) {
     if(isShared){
       return _sharedFolderPlans.where((plan) => plan.to.contains(planId)).toList();
@@ -1525,5 +1675,9 @@ class PlanProvider with ChangeNotifier {
     else{
       return _plans.where((plan) => plan.from.contains(parentId)).toList();
     }
+  }
+
+  Future<void> migrateGuestDataToNewUser(String guestUid, String newUid) async {
+    await _planRepository.migrateGuestDataToNewUser(guestUid, newUid);
   }
 }

@@ -151,6 +151,7 @@ class MyApp extends StatelessWidget {
         navigatorObservers: [routeObserver],
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
+            primary: Color(0xFF071D42),
             seedColor: Color(0xFF2B303A), // 👈 Primary
             secondary: Color(0xFF0C7C59), // 👈 Accent color
           ),

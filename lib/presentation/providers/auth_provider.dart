@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -56,8 +57,18 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> loginAsGuest() async {
+    _setLoading(true);
+    try {
+      await _repository.loginAsGuest();
+    } finally {
+      _setLoading(false);
+    }
+  }
 
   Future<void> logout() async {
+    // final prefs = await SharedPreferences.getInstance();
+    // prefs.clear();
     await _repository.logout();
     _user = null;
     notifyListeners();
@@ -78,5 +89,10 @@ class AuthProvider with ChangeNotifier {
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
+  }
+
+  Future<String> getLoginType() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('login_type') ?? '';
   }
 }

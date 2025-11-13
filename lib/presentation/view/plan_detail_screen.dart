@@ -1,9 +1,12 @@
 
 import 'package:bjj_dairy/presentation/view/selected_plan_screen.dart';
+import 'package:bjj_dairy/presentation/widgets/pointing_hand_animation.dart';
+import 'package:bjj_dairy/presentation/widgets/tap_hint_animation.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../core/app_analytics.dart';
@@ -47,10 +50,15 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   List<String> _tags = [];
   late List<String> _suggestedTags =
       []; //['submissions','escapes','pressure','defense];
+  bool showHint1 = false;
+  bool showHint2 = false;
+
+
 
   @override
   void initState() {
     super.initState();
+    _initHints();
     plan = widget.plan;
     print(widget.isShared);
     titleController = TextEditingController(text: plan!.title);
@@ -61,6 +69,20 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
     });
     AppAnalytics.logCardViewed(plan!.id, plan!.title);
     _initYoutubeController();
+  }
+
+  Future<void> _initHints() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final hint1Seen = prefs.getBool('hint1') ?? false;
+    final hint2Seen = prefs.getBool('hint2') ?? false;
+    final hint3Seen = prefs.getBool('hint3') ?? false;
+
+    if (!hint1Seen) {
+      setState(() => showHint1 = true);
+    } else if (!hint2Seen) {
+      setState(() => showHint2 = true);
+    }
   }
 
   @override
@@ -1509,7 +1531,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                     icon: const Icon(Icons.edit,
                                         color: Colors.black),
                                     onPressed: () {
-                                      if (!widget.isShared) {
+                                      if (widget.isShared == false) {
                                         _toggleEdit(planProvider);
                                       }
                                     },
@@ -1717,13 +1739,23 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                                   : plan!.videos!.length == 1
                                       ? 80
                                       : 130,
-                              child: VideoListView(
-                                videos: plan!.videos!
-                                  ..sort((a, b) =>
-                                      b.timestamp.compareTo(a.timestamp)),
-                                onAddVideo: () {},
-                                onPlayVideo: (video) =>
-                                    _openVideo(video, context),
+                              child: TapHintAnimation(
+                                showFinger: showHint1 && plan!.videos!.isNotEmpty && Util.ownerUserName == plan!.userId && !Util.isUserLogged,
+                                showPulse: showHint1 && plan!.videos!.isNotEmpty && Util.ownerUserName == plan!.userId && !Util.isUserLogged,
+                                hintKey: 'demo-card-videos',
+                                onDismiss: () => setState(() {
+                                  showHint1 = false;
+                                  showHint2 = true;
+                                  _openVideo(plan!.videos![0], context);
+                                }),
+                                child: VideoListView(
+                                  videos: plan!.videos!
+                                    ..sort((a, b) =>
+                                        b.timestamp.compareTo(a.timestamp)),
+                                  onAddVideo: () {},
+                                  onPlayVideo: (video) =>
+                                      _openVideo(video, context),
+                                ),
                               ),
                             ),
                             const SizedBox(
@@ -1954,81 +1986,95 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         const SizedBox(
                           height: 16,
                         ),
-                        SizedBox(
-                          height: 180, // Adjust height as needed
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: plan!.images.length + 1,
-                            itemBuilder: (context, index) {
-                              if (index < plan!.images.length) {
-                                final image = plan!.images[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) =>
-                                          FullImageViewerDialog(
-                                              imageUrl: image),
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.only(right: 8),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        image,
-                                        width: 150,
-                                        height: 150,
-                                        fit: BoxFit.cover,
-                                        loadingBuilder:
-                                            (context, child, loadingProgress) {
-                                          if (loadingProgress == null)
-                                            return child;
-                                          return Container(
-                                            width: 150,
-                                            height: 150,
-                                            color: Colors.grey[300],
-                                            child: const Center(
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2),
-                                            ),
-                                          );
-                                        },
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                          return Container(
-                                            width: 150,
-                                            height: 150,
-                                            color: Colors.grey[300],
-                                            child: const Icon(Icons.error,
-                                                color: Colors.red),
-                                          );
-                                        },
+                        TapHintAnimation(
+                          showFinger: showHint2 && plan!.images.isNotEmpty && Util.ownerUserName == plan!.userId && !Util.isUserLogged,
+                          showPulse: showHint2 && plan!.images.isNotEmpty && Util.ownerUserName == plan!.userId && !Util.isUserLogged,
+                          hintKey: 'demo-card-images',
+                          onDismiss: () => setState(() {
+                            showHint2 = false;
+                            showDialog(
+                              context: context,
+                              builder: (context) =>
+                                  FullImageViewerDialog(
+                                      imageUrl: plan!.images[0]),
+                            );
+                          }),
+                          child: SizedBox(
+                            height: 180, // Adjust height as needed
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: plan!.images.length + 1,
+                              itemBuilder: (context, index) {
+                                if (index < plan!.images.length) {
+                                  final image = plan!.images[index];
+                                  return GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) =>
+                                            FullImageViewerDialog(
+                                                imageUrl: image),
+                                      );
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          image,
+                                          width: 150,
+                                          height: 150,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder:
+                                              (context, child, loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Container(
+                                              width: 150,
+                                              height: 150,
+                                              color: Colors.grey[300],
+                                              child: const Center(
+                                                child: CircularProgressIndicator(
+                                                    strokeWidth: 2),
+                                              ),
+                                            );
+                                          },
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return Container(
+                                              width: 150,
+                                              height: 150,
+                                              color: Colors.grey[300],
+                                              child: const Icon(Icons.error,
+                                                  color: Colors.red),
+                                            );
+                                          },
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              } else {
-                                return widget.isShared ? const SizedBox.shrink() :
-                                 planProvider.isLoading
-                                    ? SizedBox(
-                                        width: 100,
-                                        height: 100,
-                                        child: Center(
-                                            child: CircularProgressIndicator()),
-                                      )
-                                    : AddImageCard(onTap: () async {
-                                        if (widget.isShared || plan!.isShared) {
-                                          return;
-                                        }
-                                        final updatedPlan = await planProvider
-                                            .pickAndUploadImages(plan);
-                                        setState(() {
-                                          plan = updatedPlan;
+                                  );
+                                } else {
+                                  return widget.isShared ? const SizedBox.shrink() :
+                                   planProvider.isLoading
+                                      ? SizedBox(
+                                          width: 100,
+                                          height: 100,
+                                          child: Center(
+                                              child: CircularProgressIndicator()),
+                                        )
+                                      : AddImageCard(onTap: () async {
+                                          if (widget.isShared || plan!.isShared) {
+                                            return;
+                                          }
+                                          final updatedPlan = await planProvider
+                                              .pickAndUploadImages(plan);
+                                          setState(() {
+                                            plan = updatedPlan;
+                                          });
                                         });
-                                      });
-                              }
-                            },
+                                }
+                              },
+                            ),
                           ),
                         ),
                         const SizedBox(
@@ -2049,6 +2095,9 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       ],
                     ),
                   ),
+                if(Util.ownerUserName == widget.plan.userId && !Util.isUserLogged)
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text(AppStrings.demoHintText,style: TextStyle(color: Colors.red,fontSize: 16),),),
                 Container(
                   width: MediaQuery.of(context).size.width,
                   color: Colors.white,
@@ -2232,6 +2281,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 const SizedBox(
                   height: 6,
                 ),
+                if(Util.ownerUserName != widget.plan.userId && !Util.isUserLogged)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [

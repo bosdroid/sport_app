@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
 
 class CustomDrawer extends StatelessWidget {
   final Function(String action) onItemTap;
@@ -7,6 +10,9 @@ class CustomDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context,listen: true);
+    final user = authProvider.user;
+    print(user);
     return Drawer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -19,18 +25,27 @@ class CustomDrawer extends StatelessWidget {
               child: Icon(Icons.task, size: 60, color: Colors.white),
             ),
           ),
-          const SizedBox(height: 16),
+          if(user != null)
+          ...[const SizedBox(height: 16),
           ListTile(
             leading: const Icon(Icons.account_box),
             title: const Text('Profile'),
             onTap: () => onItemTap('profile'),
-          ),
+          )],
+          if(user != null)
+          ...[
           const SizedBox(height: 16),
           ListTile(
             leading: const Icon(Icons.search_rounded),
             title: const Text('Search Folder'),
             onTap: () => onItemTap('search_folder'),
-          ),
+          )],
+          if(user == null)
+            ListTile(
+              leading: const Icon(Icons.login),
+              title: const Text('Login'),
+              onTap: () => onItemTap('login'),
+            ),
           const SizedBox(height: 16),
           // Contacts Section Title
           const Padding(
@@ -62,6 +77,7 @@ class CustomDrawer extends StatelessWidget {
           //   title: const Text('Contact Support'),
           //   onTap: () => onItemTap('support'),
           // ),
+          if(user != null)
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),

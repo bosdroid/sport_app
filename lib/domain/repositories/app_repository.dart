@@ -1,3 +1,4 @@
+import '../entities/app_limits.dart';
 import '../entities/video.dart';
 
 abstract class AppRepository {
@@ -9,4 +10,7 @@ abstract class AppRepository {
 
   /// Saves videos to local cache
   Future<void> cacheVideos(List<Video> videos);
+
+  /// Fetches guest user limits from Firebase
+  Future<AppLimits> fetchAppLimits();
 }

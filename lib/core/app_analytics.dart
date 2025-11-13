@@ -120,4 +120,18 @@ class AppAnalytics {
       parameters: {'entry_type': entryType},
     );
   }
+
+  static Future<void> logDemoCollection() async {
+    await _analytics.logEvent(
+      name: 'entry_demo_collection',
+      parameters: {'entry_type': 'demo_collection_clicked'},
+    );
+  }
+
+  static Future<void> logDemoTechnique() async {
+    await _analytics.logEvent(
+      name: 'entry_demo_technique',
+      parameters: {'entry_type': 'demo_technique_clicked'},
+    );
+  }
 }

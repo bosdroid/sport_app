@@ -226,4 +226,6 @@ class AppStrings {
   static const String sharePdfButton = "Share PDF";
   static const String transitionToLabel = "Transition to:";
   static const String noTransitionLabel = "-- (no linked positions)";
+
+  static const String demoHintText = "It's demo card. Create a new card to add your content.";
 }

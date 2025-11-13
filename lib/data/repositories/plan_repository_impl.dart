@@ -32,10 +32,21 @@ class PlanRepositoryImpl implements PlanRepository {
 
   @override
   Future<String?> getUserId() async {
-    final user = auth.currentUser;
-    if (user == null) return null;
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("user_name");
+    final user = auth.currentUser;
+    final username = prefs.getString("user_name");
+    if (user == null){
+      final loginType = prefs.getString("login_type");
+      if(loginType != '' && loginType == 'guest') {
+        return username;
+      }
+      else{
+        return null;
+      }
+    }
+    else{
+      return username;
+    }
   }
 
   @override
@@ -263,9 +274,9 @@ class PlanRepositoryImpl implements PlanRepository {
           final data = value.map((k, v) => MapEntry(k.toString(), v));
           final plan = Plan.fromMap(data);
 
-          if (plan.userId == userId) {
+          // if (plan.userId == userId) {
             fetchedPlans.add(plan);
-          }
+          // }
         }
       }
 
@@ -384,4 +395,72 @@ class PlanRepositoryImpl implements PlanRepository {
     await _plansRef.child('$childId/from/$parentId').remove();
   }
 
+  @override
+  Future<void> hideDefaultFolderOrCard({required int type}) async {
+    final prefs = await SharedPreferences.getInstance();
+    if(type == 0){
+      prefs.setString('default_folder', 'hide');
+    }
+    else{
+      prefs.setString('default_card', 'hide');
+    }
+  }
+
+  Future<void> migrateGuestDataToNewUser(String guestUid, String newUid) async {
+    try {
+      // _setLoading(true);
+
+      final guestPlansRef = _plansRef.child(guestUid);
+      final guestFoldersRef = _foldersRef.child(guestUid);
+      final newPlansRef = _plansRef.child(newUid);
+      final newFoldersRef = _foldersRef.child(newUid);
+
+      // 1️⃣ Move folders
+      final guestFoldersSnapshot = await guestFoldersRef.get();
+      if (guestFoldersSnapshot.exists) {
+        for (final folderSnap in guestFoldersSnapshot.children) {
+          final folderMap = Map<String, dynamic>.from(folderSnap.value as Map);
+          final folder = Folder.fromMap(folderMap);
+
+          final newFolder = folder.copyWith(
+            userId: newUid,
+          );
+
+          await newFoldersRef.child(folderSnap.key!).set(newFolder.toMap());
+        }
+        await guestFoldersRef.remove();
+      }
+
+      // 2️⃣ Move plans
+      final guestPlansSnapshot = await guestPlansRef.get();
+      if (guestPlansSnapshot.exists) {
+        for (final planSnap in guestPlansSnapshot.children) {
+          final planMap = Map<String, dynamic>.from(planSnap.value as Map);
+          final plan = Plan.fromMap(planMap);
+
+          final newPlan = plan.copyWith(
+            userId: newUid,
+          );
+
+          await newPlansRef.child(planSnap.key!).set(newPlan.toMap());
+        }
+        await guestPlansRef.remove();
+      }
+
+      // 3️⃣ Remove other guest-related nodes
+      await _shareIdsRef.child(guestUid).remove();
+      await _favouritesRef.child(guestUid).remove();
+
+      // 4️⃣ Remove local guest session
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('login_type');
+      await prefs.remove('guest_uid');
+
+      print('✅ Guest data migrated successfully');
+    } catch (e) {
+      print('⚠️ Error migrating guest data: $e');
+    } finally {
+      // _setLoading(false);
+    }
+  }
 }

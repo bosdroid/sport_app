@@ -50,4 +50,8 @@ abstract class PlanRepository {
     required String childId,
     required String userId,
   });
+
+  Future<void> hideDefaultFolderOrCard({required int type});
+
+  Future<void> migrateGuestDataToNewUser(String guestUid, String newUid);
 }

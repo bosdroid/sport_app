@@ -10,6 +10,7 @@ import '../../core/routes/routes_names.dart';
 import '../../core/utils.dart';
 import '../../domain/entities/folder.dart';
 import '../../domain/entities/plan.dart';
+import '../providers/auth_provider.dart';
 import '../providers/plan_provider.dart';
 import '../widgets/tag_selector.dart';
 import '../widgets/technique_card.dart';
@@ -298,6 +299,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
   @override
   Widget build(BuildContext context) {
     final planProvider = Provider.of<PlanProvider>(context, listen: true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: true);
     final currentFolderPlanIds = planProvider.plans
         .where((p) => p.folderId == widget.folderId)
         .map((p) => p.id)
@@ -410,7 +412,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                                   ...planProvider.plans,
                                   ...planProvider.favouritesPlans
                                 ]
-                                    // .where((plan) => plan.folderId == widget.folderId)
+                                     .where((plan) => plan.id != Util.ownerDefaultCardId)
                                     .isEmpty) ||
                             (widget.isShared &&
                                 [
@@ -448,7 +450,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
                                 ]
                                     .where((plan) =>
                                 plan.folderId == widget.folderId || // in current folder
-                                    plan.isShared || // is shared
+                                    (plan.isShared && plan.id != Util.ownerDefaultCardId) || // is shared
                                     (
                                         plan.folderId != widget.folderId &&
                                             (
@@ -536,7 +538,7 @@ class _FolderPlansScreenState extends State<FolderPlansScreen> {
               )
             ,
             const SizedBox(height: 12),
-            if (!widget.isShared)
+            if (!widget.isShared || authProvider.getLoginType() != 'guest')
               FloatingActionButton(
                 heroTag: 'addPlan',
                 backgroundColor: Theme.of(context).primaryColor,

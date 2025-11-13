@@ -2,14 +2,20 @@ import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/entities/app_limits.dart';
 import '../../domain/entities/video.dart';
 import '../../domain/repositories/app_repository.dart';
 
 class AppRepositoryImpl implements AppRepository {
   final DatabaseReference _videosRef;
+  final DatabaseReference _limitsRef;
 
-  AppRepositoryImpl({DatabaseReference? videosRef})
-      : _videosRef = videosRef ?? FirebaseDatabase.instance.ref().child('VIDEOS');
+  AppRepositoryImpl({
+    DatabaseReference? videosRef,
+    DatabaseReference? limitsRef,
+  })  : _videosRef = videosRef ?? FirebaseDatabase.instance.ref('VIDEOS'),
+        _limitsRef =
+            limitsRef ?? FirebaseDatabase.instance.ref('LIMITS');
 
   @override
   Future<List<Video>> fetchVideos() async {
@@ -56,6 +62,18 @@ class AppRepositoryImpl implements AppRepository {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = jsonEncode(videos.map((v) => v.toJson()).toList());
     await prefs.setString('cached_videos', jsonStr);
+  }
+
+  /// ✅ Fetch guest user limits from Firebase Realtime Database
+  @override
+  Future<AppLimits> fetchAppLimits() async {
+    final snap = await _limitsRef.get();
+    if (!snap.exists || snap.value == null) {
+      return AppLimits(maxFoldersForGuest: 1, maxCardsForGuest: 1);
+    }
+
+    final data = Map<String, dynamic>.from(snap.value as Map);
+    return AppLimits.fromJson(data);
   }
 }
 

@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:restart_app/restart_app.dart';
 
 import '../../core/app_strings.dart';
 import '../../core/routes/routes_names.dart';
@@ -47,6 +48,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       await authProvider.signUpWithEmail(username, email, password);
       if (!context.mounted) return;
+      // Restart.restartApp(notificationBody: 'Please wait...');
       Navigator.pushReplacementNamed(context, RoutesNames.homeScreen);
     } catch (e) {
       final errorMsg = authProvider.getErrorMessage(e) ?? AppStrings.somethingWentWrong;

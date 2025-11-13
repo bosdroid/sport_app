@@ -81,12 +81,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         ListTile(
                           title: Text(AppStrings.profileUsernameLabel,style: TextStyle(color: Colors.black,fontWeight: FontWeight.bold),),
-                          subtitle: Text('${profileProvider.loggedUser?.username}'),
+                          subtitle: Text('${profileProvider.loggedUser?.username ?? ''}'),
                         ),
                         Divider(height: 1,color: Colors.grey.shade300,),
                         ListTile(
                           title: Text(AppStrings.profileEmailLabel,style: TextStyle(color: Colors.black,fontWeight: FontWeight.bold),),
-                          subtitle: Text('${profileProvider.loggedUser?.email}'),
+                          subtitle: Text('${profileProvider.loggedUser?.email ?? ''}'),
                         )
                       ],
                     ),

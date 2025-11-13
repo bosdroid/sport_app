@@ -16,6 +16,9 @@ abstract class AuthRepository {
   /// Login using Apple.
   Future<User?> loginWithApple();
 
+  /// Login using Apple.
+  Future<void> loginAsGuest();
+
   /// Logout from Firebase & clear session.
   Future<void> logout();
 
